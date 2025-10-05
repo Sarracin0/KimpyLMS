@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { UserRole } from '@prisma/client'
+import { AttachmentScope, UserRole } from '@prisma/client'
 
 import { db } from '@/lib/db'
 import { assertRole, requireAuthContext } from '@/lib/current-profile'
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: RouteParam
     }
 
     const attachments = await db.attachment.findMany({
-      where: { courseId, chapterId },
+      where: { courseId, chapterId, scope: AttachmentScope.LESSON },
       orderBy: { createdAt: 'desc' },
     })
 
@@ -67,6 +67,7 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
         url,
         name: name ?? url.split('/').pop() ?? 'Resource',
         type: type ?? null,
+        scope: AttachmentScope.LESSON,
       },
     })
 

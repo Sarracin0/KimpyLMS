@@ -29,8 +29,8 @@ export async function syncLegacyChapterForBlock(blockId: string) {
     return
   }
 
-  const isSyncableBlock =
-    block.type === BlockType.VIDEO_LESSON || block.type === BlockType.LIVE_SESSION
+  const syncableTypes = [BlockType.VIDEO_LESSON, BlockType.LIVE_SESSION, BlockType.RESOURCES]
+  const isSyncableBlock = syncableTypes.includes(block.type)
 
   if (!isSyncableBlock) {
     if (block.legacyChapterId) {
@@ -78,7 +78,9 @@ export async function syncLegacyChaptersForModule(moduleId: string) {
       lesson: {
         moduleId,
       },
-      type: BlockType.VIDEO_LESSON,
+      type: {
+        in: [BlockType.VIDEO_LESSON, BlockType.LIVE_SESSION, BlockType.RESOURCES],
+      },
     },
     select: { id: true },
   })
@@ -90,7 +92,9 @@ export async function syncLegacyChaptersForLesson(lessonId: string) {
   const blocks = await db.lessonBlock.findMany({
     where: {
       lessonId,
-      type: BlockType.VIDEO_LESSON,
+      type: {
+        in: [BlockType.VIDEO_LESSON, BlockType.LIVE_SESSION, BlockType.RESOURCES],
+      },
     },
     select: { id: true },
   })
@@ -106,7 +110,9 @@ export async function syncLegacyChaptersForCourse(courseId: string) {
           courseId,
         },
       },
-      type: BlockType.VIDEO_LESSON,
+      type: {
+        in: [BlockType.VIDEO_LESSON, BlockType.LIVE_SESSION, BlockType.RESOURCES],
+      },
     },
     select: { id: true },
   })

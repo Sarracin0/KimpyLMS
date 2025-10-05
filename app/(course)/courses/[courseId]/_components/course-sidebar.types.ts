@@ -6,6 +6,17 @@ export type BlockData = {
   type: string
   position: number
   isPublished: boolean
+  legacyChapterId?: string | null
+  contentUrl?: string | null
+  liveSession?: { meetingUrl: string | null } | null
+  gamification?: {
+    contentType: 'QUIZ' | 'FLASHCARDS'
+    quizId?: string | null
+    flashcardDeck?: {
+      id: string
+      title: string | null
+    } | null
+  } | null
 }
 
 export type LessonWithBlocks = {

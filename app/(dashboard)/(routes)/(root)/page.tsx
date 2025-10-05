@@ -8,14 +8,17 @@ import {
   Clock,
   Flame,
   GraduationCap,
-  MoreHorizontal,
   Play,
   Star,
   Target,
   TrendingUp,
+  Trophy,
+  Users,
   Zap,
+  ArrowUpRight,
+  Circle,
 } from 'lucide-react'
-import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns'
+import { format, startOfWeek, addDays, isToday } from 'date-fns'
 import { it } from 'date-fns/locale'
 
 import { getDashboardCourses } from '@/actions/get-dashboard-courses'
@@ -45,50 +48,52 @@ function getStreakEmoji(count: number) {
   return '✨'
 }
 
-// Modern Stats Card Component
+// Sophisticated Stats Card Component
 interface StatsCardProps {
   title: string
   value: string | number
-  subtitle: string
+  subtitle?: string
   icon: React.ComponentType<{ className?: string }>
   trend?: {
-    value: string
-    positive: boolean
+    value: number
+    label: string
   }
-  className?: string
 }
 
-function StatsCard({ title, value, subtitle, icon: Icon, trend, className }: StatsCardProps) {
+function StatsCard({ title, value, subtitle, icon: Icon, trend }: StatsCardProps) {
   return (
-    <Card className={cn("relative overflow-hidden border-0 shadow-sm bg-gradient-to-br from-white to-gray-50/50", className)}>
+    <Card className={cn(
+      "group relative overflow-hidden",
+      "border border-white/20 bg-white/60 backdrop-blur-md supports-[backdrop-filter]:bg-white/50",
+      "hover:bg-white/70 hover:shadow-md",
+      "transition-all duration-200"
+    )}>
       <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <div className="space-y-1">
-              <p className="text-3xl font-bold tracking-tight">{value}</p>
-              <p className="text-xs text-muted-foreground">{subtitle}</p>
+        <div className="mb-6 flex items-start justify-between">
+          <div className="rounded-lg bg-[#5D62E1] p-2">
+            <Icon className="h-4 w-4 text-white" />
+          </div>
+          {trend && (
+            <div className="flex items-center gap-1 text-[#5D62E1]">
+              <TrendingUp className="h-3 w-3" />
+              <span className="text-xs font-semibold">
+                +{trend.value}
+              </span>
             </div>
-          </div>
-          <div className="rounded-full bg-primary/10 p-3">
-            <Icon className="h-6 w-6 text-primary" />
-          </div>
+          )}
         </div>
-        {trend && (
-          <div className="mt-4 flex items-center gap-1">
-            <TrendingUp className={cn("h-3 w-3", trend.positive ? "text-emerald-500" : "text-red-500")} />
-            <span className={cn("text-xs font-medium", trend.positive ? "text-emerald-600" : "text-red-600")}>
-              {trend.value}
-            </span>
-            <span className="text-xs text-muted-foreground">questo mese</span>
-          </div>
-        )}
+        
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-gray-600">{title}</p>
+          <p className="text-3xl font-bold tracking-tight text-gray-900">{value}</p>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
       </CardContent>
     </Card>
   )
 }
 
-// Modern Course Card Component
+// Minimalist Course Card Component
 interface CourseCardProps {
   course: {
     id: string
@@ -107,149 +112,146 @@ function CourseCard({ course, isEnrolled = false }: CourseCardProps) {
   const href = isEnrolled ? `/courses/${course.id}` : `/library/courses/${course.id}`
   
   return (
-    <Card className="group relative overflow-hidden border-0 bg-white shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-      
-      <CardContent className="p-0">
-        {/* Course Header */}
-        <div className="relative p-6 pb-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="flex items-center gap-2">
-                {course.category && (
-                  <Badge variant="secondary" className="text-xs font-medium">
-                    {course.category.name}
-                  </Badge>
-                )}
-                {course.estimatedDurationMinutes && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {Math.round(course.estimatedDurationMinutes / 60)}h
-                  </div>
-                )}
-              </div>
-              
-              <h3 className="font-semibold text-base leading-tight">{course.title}</h3>
-              
-              {course.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                  {course.description}
-                </p>
+    <Link href={href} className="group block">
+      <div className={cn(
+        "relative p-6",
+        "border border-white/30 bg-white/60 backdrop-blur-md supports-[backdrop-filter]:bg-white/50",
+        "transition-all duration-200 hover:bg-white/70 hover:shadow-sm"
+      )}>
+        {/* Progress indicator bar - only for enrolled courses */}
+        {isEnrolled && typeof course.progress === 'number' && (
+          <div className="absolute left-0 right-0 top-0 h-1 bg-white/30">
+            <div 
+              className="h-full bg-[#5D62E1] transition-all duration-300" 
+              style={{ width: `${course.progress}%` }}
+            />
+          </div>
+        )}
+        
+        <div className="space-y-4">
+          {/* Meta and Category */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {course.category && (
+                <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  {course.category.name}
+                </span>
+              )}
+              {course.category && course.estimatedDurationMinutes && (
+                <span className="text-gray-300">•</span>
+              )}
+              {course.estimatedDurationMinutes && (
+                <span className="text-xs text-gray-500">
+                  {Math.round(course.estimatedDurationMinutes / 60)}h
+                </span>
               )}
             </div>
             
-            <Button variant="ghost" size="icon" className="shrink-0">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+            <ArrowUpRight className="h-4 w-4 text-gray-400 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#5D62E1]" />
           </div>
-        </div>
-
-        {/* Progress Section */}
-        {isEnrolled && typeof course.progress === 'number' && (
-          <div className="px-6 pb-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Progresso</span>
-                <span className="text-sm font-bold">{course.progress}%</span>
+          
+          {/* Title */}
+          <h3 className="leading-tight text-lg font-semibold text-gray-900 group-hover:text-[#5D62E1]">
+            {course.title}
+          </h3>
+          
+          {/* Description */}
+          {course.description && (
+            <p className="line-clamp-2 leading-relaxed text-sm text-gray-600">
+              {course.description}
+            </p>
+          )}
+          
+          {/* Progress for enrolled courses */}
+          {isEnrolled && typeof course.progress === 'number' && (
+            <div className="flex items-center gap-2 pt-2">
+              <div className="flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-medium text-gray-900">{course.progress}%</span>
+                  <span className="text-xs text-gray-500">completato</span>
+                </div>
               </div>
-              <Progress value={course.progress} className="h-2" />
             </div>
-          </div>
-        )}
-
-        {/* Action Section */}
-        <div className="border-t bg-gray-50/50 px-6 py-4">
-          <Button 
-            size="sm" 
-            className={cn(
-              "w-full font-medium",
-              isEnrolled ? "bg-primary hover:bg-primary/90" : "bg-white border border-gray-200 text-gray-900 hover:bg-gray-50"
-            )}
-            asChild
-          >
-            <Link href={href}>
-              {isEnrolled ? (
-                <>
-                  <Play className="mr-2 h-4 w-4" />
-                  Continua
-                </>
-              ) : (
-                <>
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Inizia corso
-                </>
-              )}
-            </Link>
-          </Button>
+          )}
+          
+          {/* Status indicator */}
+          {!isEnrolled && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <Circle className="h-2 w-2 fill-[#5D62E1] text-[#5D62E1]" />
+              <span>Disponibile</span>
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </Link>
   )
 }
+// Minimalist Calendar Component
+interface CalendarProps {
+  upcomingCount: number
+}
 
-// Modern Calendar Component
-function ModernCalendar() {
+function MinimalCalendar({ upcomingCount }: CalendarProps) {
   const today = new Date()
   const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 1 })
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfCurrentWeek, i))
   
   const monthYear = format(today, 'MMMM yyyy', { locale: it })
-  const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+  const dayNames = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 
-  return (
-    <Card className="border-0 shadow-sm">
+return (
+    <Card className="border border-white/20 bg-white/60 backdrop-blur-md supports-[backdrop-filter]:bg-white/50">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4" />
+          <CardTitle className="text-base font-semibold text-gray-900 capitalize">
             {monthYear}
           </CardTitle>
-          <Button variant="ghost" size="sm" className="text-xs">
-            Vedi tutto
-          </Button>
+          {upcomingCount > 0 && (
+            <Badge variant="secondary" className="bg-[#5D62E1] text-white hover:bg-[#5055c9]">
+              {upcomingCount}
+            </Badge>
+          )}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {/* Week View */}
-          <div className="grid grid-cols-7 gap-1">
-            {dayNames.map((day, i) => (
-              <div key={day} className="text-center">
-                <div className="text-xs font-medium text-muted-foreground mb-2">{day}</div>
-                <div
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
-                    isToday(weekDays[i])
-                      ? "bg-primary text-primary-foreground"
-                      : "text-gray-600 hover:bg-gray-100"
-                  )}
-                >
-                  {format(weekDays[i], 'd')}
-                </div>
+      <CardContent className="space-y-4">
+        {/* Week View */}
+        <div className="grid grid-cols-7 gap-2">
+          {dayNames.map((day, i) => (
+            <div key={day} className="text-center space-y-2">
+              <div className="text-xs font-medium text-gray-500">{day}</div>
+              <div
+                className={cn(
+                  "w-8 h-8 flex items-center justify-center text-sm font-medium",
+                  "transition-colors duration-200",
+isToday(weekDays[i])
+                    ? "rounded-md bg-[#5D62E1] text-white"
+                    : "rounded-md text-gray-600 hover:bg-white/50"
+                )}
+              >
+                {format(weekDays[i], 'd')}
               </div>
-            ))}
-          </div>
-          
-          <Separator />
-          
-          {/* Quick Stats */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Questa settimana</span>
-              <span className="font-medium">3 obiettivi</span>
             </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Prossimo deadline</span>
-              <span className="font-medium text-orange-600">2 giorni</span>
-            </div>
-          </div>
+          ))}
         </div>
+        
+        {/* Upcoming sessions */}
+        {upcomingCount > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Sessioni in programma</span>
+                <span className="font-semibold text-gray-900">{upcomingCount}</span>
+              </div>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   )
 }
 
-// Achievement Card Component
+// Minimalist Achievement Card Component
 interface AchievementCardProps {
   badges: Array<{
     id: string
@@ -261,36 +263,28 @@ interface AchievementCardProps {
   }>
 }
 
-function AchievementCard({ badges }: AchievementCardProps) {
-  return (
-    <Card className="border-0 shadow-sm">
+function MinimalAchievementCard({ badges }: AchievementCardProps) {
+return (
+    <Card className="border border-white/20 bg-white/60 backdrop-blur-md supports-[backdrop-filter]:bg-white/50">
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Award className="h-4 w-4" />
-            Ultimi Achievement
-          </CardTitle>
-          <Button variant="ghost" size="sm" className="text-xs">
-            Vedi tutti
-          </Button>
-        </div>
+        <CardTitle className="text-base font-semibold text-gray-900">
+          Achievement recenti
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {badges.length > 0 ? (
           <div className="space-y-3">
-            {badges.slice(0, 3).map((userBadge, index) => (
-              <div key={userBadge.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm",
-                  index === 0 ? "bg-gradient-to-br from-yellow-400 to-orange-500" :
-                  index === 1 ? "bg-gradient-to-br from-blue-400 to-purple-500" :
-                  "bg-gradient-to-br from-green-400 to-teal-500"
-                )}>
-                  {index === 0 ? '🏆' : index === 1 ? '⭐' : '🎯'}
+            {badges.slice(0, 4).map((userBadge, index) => (
+              <div 
+                key={userBadge.id} 
+                className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0"
+              >
+<div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-[#5D62E1]">
+                  <Trophy className="h-4 w-4 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{userBadge.badge.name}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm font-medium text-gray-900">{userBadge.badge.name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
                     {format(userBadge.awardedAt, 'd MMM yyyy', { locale: it })}
                   </p>
                 </div>
@@ -298,11 +292,11 @@ function AchievementCard({ badges }: AchievementCardProps) {
             ))}
           </div>
         ) : (
-          <div className="text-center py-6">
-            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-              <Target className="h-6 w-6 text-gray-400" />
+          <div className="text-center py-8">
+<div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-white/60 backdrop-blur-md supports-[backdrop-filter]:bg-white/50">
+              <Trophy className="h-5 w-5 text-gray-400" />
             </div>
-            <p className="text-sm text-muted-foreground">Completa il tuo primo corso per sbloccare badge!</p>
+            <p className="text-sm text-gray-600">Nessun achievement</p>
           </div>
         )}
       </CardContent>
@@ -310,43 +304,47 @@ function AchievementCard({ badges }: AchievementCardProps) {
   )
 }
 
-// Progress Overview Component
-interface ProgressOverviewProps {
-  coursesInProgress: any[]
-}
+// Minimalist Quick Actions Component
+function QuickActions() {
+  const actions = [
+    {
+      label: 'Libreria corsi',
+      icon: BookOpen,
+      href: '/library',
+    },
+    {
+      label: 'I miei corsi',
+      icon: GraduationCap,
+      href: '/courses',
+    },
+    {
+      label: 'Live Sessions',
+      icon: Users,
+      href: '/live-sessions',
+    },
+    {
+      label: 'Gamification',
+      icon: Trophy,
+      href: '/gamification',
+    },
+  ]
 
-function ProgressOverview({ coursesInProgress }: ProgressOverviewProps) {
-  if (coursesInProgress.length === 0) {
-    return null
-  }
-
-  return (
-    <Card className="border-0 shadow-sm">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-base font-semibold">Progressi in corso</CardTitle>
-        <CardDescription>I tuoi corsi attivi</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {coursesInProgress.slice(0, 3).map((enrollment) => {
-            const course = enrollment.course
-            const progress = enrollment.progress
-            
+return (
+    <Card className="border border-white/20 bg-white/60 backdrop-blur-md supports-[backdrop-filter]:bg-white/50">
+      <CardContent className="p-4">
+        <div className="space-y-2">
+          {actions.map((action) => {
+            const Icon = action.icon
             return (
-              <div key={course.id} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{course.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {progress}% completato
-                    </p>
+<Link key={action.href} href={action.href}>
+                <div className="group flex items-center justify-between rounded-md p-3 transition-colors hover:bg-white/50">
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-900">{action.label}</span>
                   </div>
-                  <Button variant="ghost" size="sm" className="shrink-0">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+<ArrowUpRight className="h-4 w-4 text-gray-400 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#5D62E1]" />
                 </div>
-                <Progress value={progress} className="h-2" />
-              </div>
+              </Link>
             )
           })}
         </div>
@@ -418,51 +416,75 @@ export default async function Dashboard() {
     ? profile.userId.split('_')[1] 
     : profile.userId.split('@')[0] || 'Utente'
 
+  // Calculate dynamic stats
+  const totalActiveCourses = coursesInProgress.length
+  const totalCompleted = completedCourses.length
+  const totalBadges = earnedBadges.length
+  const streakDays = profile.streakCount
+  
+  // Calculate trends (using real data)
+  const recentCompletions = completedCourses.filter(
+    (c) => c.completedAt && new Date(c.completedAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000
+  ).length
+  
+  const recentBadges = earnedBadges.filter(
+    (b) => new Date(b.awardedAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000
+  ).length
+
   return (
-    <div className="min-h-screen bg-gray-50/30">
-      <div className="mx-auto max-w-7xl space-y-8 p-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="mx-auto max-w-7xl space-y-8 p-6 md:p-8">
         
-        {/* Hero Section */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold tracking-tight">
+        {/* Minimalist Hero Section */}
+        <div className="space-y-4">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
               {getGreeting()}, {userName}
             </h1>
-            <span className="text-2xl">{getStreakEmoji(profile.streakCount)}</span>
           </div>
-          <p className="text-lg text-muted-foreground">
-            {format(new Date(), "EEEE, d MMMM yyyy", { locale: it })}
-          </p>
+          <div className="flex items-center gap-6">
+            <p className="text-base text-gray-600 capitalize">
+              {format(new Date(), "EEEE, d MMMM yyyy", { locale: it })}
+            </p>
+            {streakDays > 0 && (
+              <>
+                <span className="text-gray-300">•</span>
+                <div className="flex items-center gap-2">
+                  <Flame className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-medium text-gray-900">{streakDays} giorni consecutivi</span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Stats Grid with dynamic data */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Corsi Attivi"
-            value={coursesInProgress.length}
-            subtitle="In corso di completamento"
+            value={totalActiveCourses}
+            subtitle={totalActiveCourses === 1 ? "corso in progresso" : "corsi in progresso"}
             icon={BookOpen}
-            trend={{ value: "+2 questa settimana", positive: true }}
           />
           <StatsCard
             title="Completati"
-            value={completedCourses.length}
-            subtitle="Corsi terminati con successo"
+            value={totalCompleted}
+            subtitle={totalCompleted === 1 ? "corso completato" : "corsi completati"}
             icon={GraduationCap}
-            trend={{ value: "+1 questo mese", positive: true }}
+            trend={recentCompletions > 0 ? { value: recentCompletions, label: "questo mese" } : undefined}
           />
           <StatsCard
             title="Achievement"
-            value={earnedBadges.length}
-            subtitle="Badge sbloccati"
+            value={totalBadges}
+            subtitle={totalBadges === 1 ? "badge sbloccato" : "badge sbloccati"}
             icon={Award}
+            trend={recentBadges > 0 ? { value: recentBadges, label: "questo mese" } : undefined}
           />
           <StatsCard
             title="Streak"
-            value={`${profile.streakCount} giorni`}
-            subtitle="Consecutivi di attività"
+            value={`${streakDays}`}
+            subtitle={streakDays === 1 ? "giorno consecutivo" : "giorni consecutivi"}
             icon={Flame}
-            className="bg-gradient-to-br from-orange-50 to-red-50"
           />
         </div>
 
@@ -470,129 +492,171 @@ export default async function Dashboard() {
         <div className="grid gap-8 lg:grid-cols-3">
           
           {/* Main Content - 2 columns */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-12">
             
-            {/* New Courses Section */}
-            <section className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-2xl font-bold tracking-tight">Nuovi Corsi</h2>
-                  <p className="text-muted-foreground">
-                    Scopri i corsi appena aggiunti alla piattaforma
-                  </p>
-                </div>
-                <Button variant="outline" className="font-medium" asChild>
-                  <Link href="/library">
-                    Esplora tutto
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-              
-              {availableCourses.length > 0 ? (
-                <div className="grid gap-6 md:grid-cols-2">
-                  {availableCourses.slice(0, 4).map((course) => (
-                    <CourseCard key={course.id} course={course} isEnrolled={false} />
-                  ))}
-                </div>
-              ) : (
-                <Card className="border-dashed border-2 border-gray-200">
-                  <CardContent className="py-12 text-center">
-                    <Zap className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Tutto aggiornato!</h3>
-                    <p className="text-muted-foreground max-w-sm mx-auto">
-                      Non ci sono nuovi corsi al momento. Controlla più tardi per nuovi contenuti.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </section>
-
-            {/* My Courses Section */}
-            <section className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-2xl font-bold tracking-tight">I Miei Corsi</h2>
-                  <p className="text-muted-foreground">
-                    Continua il tuo percorso di apprendimento
-                  </p>
-                </div>
-                <Button variant="outline" className="font-medium" asChild>
-                  <Link href="/courses">
-                    Gestisci corsi
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-              
-              {inProgressCourses.length > 0 || completedCoursesData.length > 0 ? (
-                <div className="grid gap-6 md:grid-cols-2">
-                  {[...inProgressCourses, ...completedCoursesData]
-                    .slice(0, 4)
-                    .map((course) => (
+            {/* Innovative View Switcher - Disruptive Navigation */}
+            <div className="space-y-8">
+              {/* Dynamic section header based on active courses */}
+              {inProgressCourses.length > 0 ? (
+                <section className="space-y-6">
+                  <div className="flex items-end justify-between border-b border-gray-200 pb-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+<div className="h-4 w-1 bg-[#5D62E1]" />
+                        <h2 className="text-2xl font-bold tracking-tight text-gray-900">In Corso</h2>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {inProgressCourses.length} {inProgressCourses.length === 1 ? 'corso attivo' : 'corsi attivi'}
+                      </p>
+                    </div>
+                    <Link 
+                      href="/courses"
+                      className="text-sm font-medium text-gray-900 hover:text-gray-600 transition-colors flex items-center gap-1"
+                    >
+                      Vedi tutti
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {inProgressCourses.slice(0, 4).map((course) => (
                       <CourseCard key={course.id} course={course} isEnrolled={true} />
                     ))}
-                </div>
-              ) : (
-                <Card className="border-dashed border-2 border-gray-200">
-                  <CardContent className="py-12 text-center">
-                    <GraduationCap className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Inizia il tuo percorso</h3>
-                    <p className="text-muted-foreground max-w-sm mx-auto mb-6">
-                      Non sei ancora iscritto a nessun corso. Esplora la nostra libreria per iniziare!
+                  </div>
+                </section>
+              ) : null}
+              
+              {/* Available Courses Section */}
+              <section className="space-y-6">
+                <div className="flex items-end justify-between border-b border-gray-200 pb-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+<div className="h-4 w-1 bg-[#5D62E1]" />
+                      <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+                        {inProgressCourses.length > 0 ? 'Esplora Catalogo' : 'Inizia Ora'}
+                      </h2>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {availableCourses.length} {availableCourses.length === 1 ? 'corso disponibile' : 'corsi disponibili'}
                     </p>
-                    <Button asChild>
-                      <Link href="/library">
-                        Esplora corsi
-                        <BookOpen className="ml-2 h-4 w-4" />
+                  </div>
+                  <Link 
+                    href="/library"
+                    className="text-sm font-medium text-gray-900 hover:text-gray-600 transition-colors flex items-center gap-1"
+                  >
+                    Catalogo completo
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Link>
+                </div>
+                
+                {availableCourses.length > 0 ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {availableCourses.slice(0, inProgressCourses.length > 0 ? 4 : 6).map((course) => (
+                      <CourseCard key={course.id} course={course} isEnrolled={false} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="border border-dashed border-gray-300 rounded-lg p-12 text-center">
+                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Nessun corso disponibile</h3>
+                    <p className="text-sm text-gray-600 max-w-sm mx-auto">
+                      Non ci sono nuovi corsi al momento. Controlla più tardi.
+                    </p>
+                  </div>
+                )}
+              </section>
+              
+              {/* Completed Courses - Collapsed View */}
+              {completedCoursesData.length > 0 && (
+                <section className="space-y-6">
+                  <div className="flex items-end justify-between border-b border-gray-200 pb-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+<div className="h-4 w-1 bg-[#5D62E1]/50" />
+                        <h2 className="text-xl font-semibold tracking-tight text-gray-900">Completati</h2>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {completedCoursesData.length} {completedCoursesData.length === 1 ? 'corso completato' : 'corsi completati'}
+                      </p>
+                    </div>
+                    <Link 
+                      href="/courses"
+                      className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1"
+                    >
+                      Mostra tutti
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {completedCoursesData.slice(0, 3).map((course) => (
+                      <Link key={course.id} href={`/courses/${course.id}`}>
+                        <div className="flex items-center justify-between p-4 border border-gray-200 hover:border-gray-900/40 hover:bg-gray-50 transition-all group">
+                          <div className="flex items-center gap-3 min-w-0">
+<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-[#5D62E1]">
+                              <GraduationCap className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{course.title}</p>
+                              {course.category && (
+                                <p className="text-xs text-gray-500 uppercase tracking-wider">{course.category.name}</p>
+                              )}
+                            </div>
+                          </div>
+<ArrowUpRight className="ml-2 h-4 w-4 flex-shrink-0 text-gray-400 transition-colors group-hover:text-[#5D62E1]" />
+                        </div>
                       </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
+                    ))}
+                  </div>
+                </section>
               )}
-            </section>
+            </div>
           </div>
 
           {/* Sidebar - 1 column */}
           <div className="space-y-6">
             
             {/* Profile Card */}
-            <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/5 to-transparent">
+<Card className="border border-white/20 bg-white/60 backdrop-blur-md supports-[backdrop-filter]:bg-white/50">
               <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-14 w-14 ring-2 ring-primary/20">
+                <div className="flex items-start gap-4">
+<Avatar className="h-14 w-14 ring-2 ring-[#5D62E1]/20">
                     <AvatarImage src={profile.avatarUrl || undefined} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
+<AvatarFallback className="bg-[#5D62E1] text-white font-semibold text-base">
                       {userName.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-lg">{userName}</h3>
+                  <div className="flex-1 space-y-2">
+                    <h3 className="font-semibold text-base text-gray-900">{userName}</h3>
                     {profile.jobTitle && (
-                      <p className="text-sm text-muted-foreground">{profile.jobTitle}</p>
+                      <p className="text-sm text-gray-600">{profile.jobTitle}</p>
                     )}
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3 text-yellow-500" />
-                        <span className="font-medium">{profile.points}</span>
-                      </div>
-                      {profile.department && (
-                        <span className="text-muted-foreground">{profile.department}</span>
-                      )}
-                    </div>
+                    {profile.department && (
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">{profile.department}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <Separator className="my-4" />
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Punti totali</span>
+                  <div className="flex items-center gap-1.5">
+<Star className="h-4 w-4 text-[#5D62E1] fill-[#5D62E1]" />
+                    <span className="text-sm font-semibold text-gray-900">{profile.points}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Calendar */}
-            <ModernCalendar />
+            {/* Quick Actions */}
+            <QuickActions />
 
-            {/* Progress Overview */}
-            <ProgressOverview coursesInProgress={coursesInProgress} />
+            {/* Calendar */}
+            <MinimalCalendar upcomingCount={upcomingSessions.length} />
 
             {/* Achievements */}
-            <AchievementCard badges={earnedBadges} />
+            <MinimalAchievementCard badges={earnedBadges} />
 
           </div>
         </div>

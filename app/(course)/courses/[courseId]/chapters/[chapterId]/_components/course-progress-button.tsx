@@ -58,8 +58,12 @@ export const CourseProgressButton = ({
       onClick={onClick}
       disabled={isLoading}
       type="button"
-      variant={isCompleted ? 'outline' : 'success'}
-      className="w-full md:w-auto"
+      variant={isCompleted ? 'outline' : 'default'}
+      className={`w-full md:w-auto ${
+        isCompleted
+          ? 'border-[#5D62E1] text-[#5D62E1] hover:bg-[#5D62E1]/10'
+          : 'bg-[#5D62E1] text-white hover:bg-[#5055c9]'
+      }`}
     >
       {isCompleted ? 'Not completed' : 'Mark as complete'}
       <Icon className="ml-2 h-4 w-4" />

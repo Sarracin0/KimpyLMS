@@ -58,6 +58,28 @@ const CourseIdPage = async ({ params }: CourseIdPageProps) => {
         include: {
           blocks: {
             orderBy: { position: 'asc' },
+            include: {
+              attachments: { orderBy: { createdAt: 'asc' } },
+              quiz: {
+                include: {
+                  questions: { include: { options: true }, orderBy: { position: 'asc' } },
+                },
+              },
+              gamification: {
+                include: {
+                  quiz: {
+                    include: {
+                      questions: { include: { options: true }, orderBy: { position: 'asc' } },
+                    },
+                  },
+                  flashcardDeck: {
+                    include: {
+                      cards: { orderBy: { position: 'asc' } },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -73,7 +95,10 @@ const CourseIdPage = async ({ params }: CourseIdPageProps) => {
   )
   const hasSupportingResources =
     course.attachments.length > 0 ||
-    blocks.some((block) => block.type === 'RESOURCES' && Boolean(block.contentUrl))
+    blocks.some(
+      (block) =>
+        block.type === 'RESOURCES' && (Boolean(block.contentUrl) || (block.attachments?.length ?? 0) > 0),
+    )
   const hasGamification = course.achievements.length > 0
 
   const recommended = [

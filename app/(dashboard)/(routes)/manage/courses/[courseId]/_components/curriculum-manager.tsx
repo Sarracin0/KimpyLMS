@@ -3,23 +3,89 @@
 import { useState, type Dispatch, type SetStateAction } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import type { CourseModule as DbCourseModule, Lesson as DbLesson, LessonBlock as DbLessonBlock } from '@prisma/client'
+import type {
+  CourseModule as DbCourseModule,
+  Lesson as DbLesson,
+  LessonBlock as DbLessonBlock,
+  LessonBlockAttachment as DbLessonBlockAttachment,
+  FlashcardCard as DbFlashcardCard,
+  FlashcardDeck as DbFlashcardDeck,
+  GamificationBlock as DbGamificationBlock,
+  GamificationContentType,
+  GamificationStatus,
+  Quiz as DbQuiz,
+  QuizOption as DbQuizOption,
+  QuizQuestion as DbQuizQuestion,
+} from '@prisma/client'
 import { Plus, FolderOpen, BookOpen, Video, FileText } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ModuleAccordion, type Module, type Lesson, type LessonBlock, type VirtualClassroomConfig } from './module-accordion'
+import {
+  ModuleAccordion,
+  type Module,
+  type Lesson,
+  type LessonBlock,
+  type VirtualClassroomConfig,
+} from './module-accordion'
 
-type ModulePayload = DbCourseModule & {
-  lessons: (DbLesson & { blocks: DbLessonBlock[] })[]
+type QuizPayload = DbQuiz & { questions: (DbQuizQuestion & { options: DbQuizOption[] })[] }
+type GamificationPayload = DbGamificationBlock & {
+  flashcardDeck?: (DbFlashcardDeck & { cards: DbFlashcardCard[] }) | null
+  quiz?: QuizPayload | null
 }
 
-type LessonPayload = DbLesson & { blocks: DbLessonBlock[] }
+type BlockPayload = DbLessonBlock & {
+  attachments?: DbLessonBlockAttachment[]
+  quiz?: QuizPayload | null
+  gamification?: GamificationPayload | null
+}
+
+type LessonPayload = DbLesson & { blocks: BlockPayload[] }
+
+export type ModulePayload = DbCourseModule & {
+  lessons: LessonPayload[]
+}
 
 const sortByPosition = <T extends { position: number }>(items: T[]) => [...items].sort((a, b) => a.position - b.position)
 
-const mapBlockFromDb = (block: DbLessonBlock): LessonBlock => ({
+const mapAttachmentFromDb = (attachment: DbLessonBlockAttachment) => ({
+  id: attachment.id,
+  name: attachment.name,
+  url: attachment.url,
+  type: attachment.type ?? null,
+})
+
+const mapQuizSummary = (quiz?: QuizPayload | null) => {
+  if (!quiz) return null
+  return {
+    id: quiz.id,
+    title: quiz.title,
+    questionCount: quiz.questions.length,
+    pointsReward: quiz.pointsReward,
+  }
+}
+
+const mapFlashcardDeck = (deck?: (DbFlashcardDeck & { cards: DbFlashcardCard[] }) | null) => {
+  if (!deck) return null
+  const orderedCards = [...deck.cards].sort((a, b) => a.position - b.position)
+  return {
+    id: deck.id,
+    title: deck.title,
+    description: deck.description ?? null,
+    cardCount: orderedCards.length,
+    cards: orderedCards.map((card) => ({
+      id: card.id,
+      front: card.front,
+      back: card.back,
+      points: card.points,
+      position: card.position,
+    })),
+  }
+}
+
+const mapBlockFromDb = (block: BlockPayload): LessonBlock => ({
   id: block.id,
   type: block.type,
   title: block.title,
@@ -29,6 +95,20 @@ const mapBlockFromDb = (block: DbLessonBlock): LessonBlock => ({
   position: block.position,
   isPublished: block.isPublished,
   liveSessionConfig: (block.liveSessionConfig as VirtualClassroomConfig | null) ?? null,
+  attachments: block.attachments?.map(mapAttachmentFromDb) ?? [],
+  quizSummary: mapQuizSummary(block.quiz ?? block.gamification?.quiz ?? null),
+  gamification: block.gamification
+    ? {
+        id: block.gamification.id,
+        status: block.gamification.status,
+        contentType: block.gamification.contentType,
+        quizId: block.gamification.quiz?.id ?? block.quiz?.id ?? null,
+        sourceAttachmentIds: block.gamification.sourceAttachmentIds,
+        config: (block.gamification.config as Record<string, unknown> | null) ?? null,
+        flashcardDeck: mapFlashcardDeck(block.gamification.flashcardDeck ?? null),
+        quizSummary: mapQuizSummary(block.gamification.quiz ?? block.quiz ?? null),
+      }
+    : null,
 })
 
 const mapLessonFromDb = (lesson: LessonPayload): Lesson => ({
@@ -134,6 +214,99 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
                 lesson.id === lessonId
                   ? { ...lesson, blocks: [...lesson.blocks, block] }
                   : lesson,
+              ),
+            },
+      ),
+    )
+  }
+
+  const replaceBlockState = (
+    moduleId: string,
+    lessonId: string,
+    blockId: string,
+    nextBlock: LessonBlock,
+  ) => {
+    onModulesChange((prev) =>
+      prev.map((module) =>
+        module.id !== moduleId
+          ? module
+          : {
+              ...module,
+              lessons: module.lessons.map((lesson) =>
+                lesson.id !== lessonId
+                  ? lesson
+                  : {
+                      ...lesson,
+                      blocks: lesson.blocks.map((block) => (block.id === blockId ? nextBlock : block)),
+                    },
+              ),
+            },
+      ),
+    )
+  }
+
+  const appendBlockAttachmentState = (
+    moduleId: string,
+    lessonId: string,
+    blockId: string,
+    attachment: LessonBlock['attachments'][number],
+  ) => {
+    onModulesChange((prev) =>
+      prev.map((module) =>
+        module.id !== moduleId
+          ? module
+          : {
+              ...module,
+              lessons: module.lessons.map((lesson) =>
+                lesson.id !== lessonId
+                  ? lesson
+                  : {
+                      ...lesson,
+                      blocks: lesson.blocks.map((block) =>
+                        block.id !== blockId
+                          ? block
+                          : {
+                              ...block,
+                              attachments: [...(block.attachments ?? []), attachment],
+                            },
+                      ),
+                    },
+              ),
+            },
+      ),
+    )
+  }
+
+  const handleReplaceBlock = (moduleId: string, lessonId: string, blockId: string, nextBlock: LessonBlock) => {
+    replaceBlockState(moduleId, lessonId, blockId, nextBlock)
+  }
+
+  const removeBlockAttachmentState = (
+    moduleId: string,
+    lessonId: string,
+    blockId: string,
+    attachmentId: string,
+  ) => {
+    onModulesChange((prev) =>
+      prev.map((module) =>
+        module.id !== moduleId
+          ? module
+          : {
+              ...module,
+              lessons: module.lessons.map((lesson) =>
+                lesson.id !== lessonId
+                  ? lesson
+                  : {
+                      ...lesson,
+                      blocks: lesson.blocks.map((block) =>
+                        block.id !== blockId
+                          ? block
+                          : {
+                              ...block,
+                              attachments: (block.attachments ?? []).filter((item) => item.id !== attachmentId),
+                            },
+                      ),
+                    },
               ),
             },
       ),
@@ -286,7 +459,7 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
   const handleAddBlock = async (
     moduleId: string,
     lessonId: string,
-    type: 'VIDEO_LESSON' | 'RESOURCES' | 'LIVE_SESSION',
+    type: 'VIDEO_LESSON' | 'RESOURCES' | 'LIVE_SESSION' | 'QUIZ' | 'GAMIFICATION',
   ) => {
     try {
       const response = await axios.post<DbLessonBlock>(
@@ -298,7 +471,11 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
               ? 'New Video Lesson'
               : type === 'RESOURCES'
                 ? 'New Resources'
-                : 'Aula virtuale BigBlueButton',
+                : type === 'QUIZ'
+                  ? 'New Quiz'
+                  : type === 'GAMIFICATION'
+                    ? 'New Gamification'
+                    : 'Aula virtuale BigBlueButton',
         },
       )
       const block = mapBlockFromDb(response.data)
@@ -306,6 +483,51 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
       toast.success('Content block added')
     } catch {
       toast.error('Unable to add content block')
+    }
+  }
+
+  const handleCreateBlockAttachment = async (
+    moduleId: string,
+    lessonId: string,
+    blockId: string,
+    payload: { url: string; name?: string | null; type?: string | null },
+  ) => {
+    const url = payload.url?.trim()
+    if (!url) {
+      return
+    }
+
+    try {
+      const response = await axios.post<DbLessonBlockAttachment>(
+        `/api/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}/blocks/${blockId}/attachments`,
+        {
+          url,
+          name: payload.name,
+          type: payload.type,
+        },
+      )
+      const attachment = mapAttachmentFromDb(response.data)
+      appendBlockAttachmentState(moduleId, lessonId, blockId, attachment)
+      toast.success('Resource added')
+    } catch {
+      toast.error('Unable to add file')
+    }
+  }
+
+  const handleDeleteBlockAttachment = async (
+    moduleId: string,
+    lessonId: string,
+    blockId: string,
+    attachmentId: string,
+  ) => {
+    try {
+      await axios.delete(
+        `/api/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}/blocks/${blockId}/attachments/${attachmentId}`
+      )
+      removeBlockAttachmentState(moduleId, lessonId, blockId, attachmentId)
+      toast.success('Resource removed')
+    } catch {
+      toast.error('Unable to delete resource')
     }
   }
 
@@ -476,6 +698,9 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
               onUpdateBlock={handleUpdateBlock}
               onDeleteBlock={handleDeleteBlock}
               onPersistBlock={handlePersistBlock}
+              onReplaceBlock={handleReplaceBlock}
+              onCreateAttachment={handleCreateBlockAttachment}
+              onDeleteAttachment={handleDeleteBlockAttachment}
             />
           ))
         )}

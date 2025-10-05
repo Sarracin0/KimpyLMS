@@ -26,6 +26,7 @@ type AvailableMember = {
   avatarUrl: string | null
   points: number
   streakCount: number
+  teams?: { id: string; name: string }[]
 }
 
 type MembersByRole = {
@@ -93,6 +94,10 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
   const [isLoadingEnrolled, setIsLoadingEnrolled] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Teams tab state
+  const [isLoadingTeams, setIsLoadingTeams] = useState(false)
+  const [teams, setTeams] = useState<{ id: string; name: string; description?: string | null; memberCount: number; totalPoints: number }[]>([])
+
   // Carica i dati quando il modal si apre o cambia tab
   useEffect(() => {
     if (isOpen) {
@@ -100,6 +105,8 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
         loadAvailableMembers()
       } else if (activeTab === 'enrolled') {
         loadEnrolledParticipants()
+      } else if (activeTab === 'teams') {
+        loadTeams()
       }
     }
   }, [isOpen, activeTab, courseId])
@@ -144,6 +151,27 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
       setEnrolledParticipants([]) // Imposta array vuoto in caso di errore
     } finally {
       setIsLoadingEnrolled(false)
+    }
+  }
+
+  const loadTeams = async () => {
+    setIsLoadingTeams(true)
+    try {
+      const response = await fetch('/api/teams')
+      if (!response.ok) throw new Error('Errore nel caricamento dei team')
+      const data = await response.json()
+      // Prepara statistiche rapide lato client (count membri e somma punti)
+      const mapped = (data || []).map((t: any) => {
+        const memberCount = t.memberships?.length || 0
+        const totalPoints = (t.memberships || []).reduce((acc: number, m: any) => acc + (m.userProfile?.points || 0), 0)
+        return { id: t.id, name: t.name, description: t.description, memberCount, totalPoints }
+      })
+      setTeams(mapped)
+    } catch (error) {
+      console.error('Errore nel caricamento dei team:', error)
+      toast.error('Errore nel caricamento dei team')
+    } finally {
+      setIsLoadingTeams(false)
     }
   }
 
@@ -258,7 +286,7 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
         className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-all ${
           isSelected 
             ? 'border-primary bg-primary/5 shadow-sm' 
-            : 'border-border hover:border-primary/50 hover:bg-muted/50'
+            : 'border-border hover:border-primary/50 hover:bg-muted/50 hover:shadow-sm'
         }`}
         onClick={() => handleMemberToggle(member.id)}
       >
@@ -274,13 +302,18 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
         </Avatar>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-medium truncate">
               {member.jobTitle || 'Nessun titolo'}
             </p>
             <Badge variant={roleBadgeVariants[member.role]} className="text-xs">
               {roleLabels[member.role]}
             </Badge>
+            {(member.teams || []).map((t) => (
+              <Badge key={t.id} variant="outline" className="text-[10px] text-muted-foreground">
+                {t.name}
+              </Badge>
+            ))}
           </div>
           {member.department && (
             <p className="text-xs text-muted-foreground truncate">{member.department}</p>
@@ -418,7 +451,7 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col rounded-xl border bg-card shadow-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -430,12 +463,16 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="add" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-3 bg-muted/40 p-1 rounded-lg">
+            <TabsTrigger value="add" className="flex items-center gap-2 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Users className="h-4 w-4" />
               Aggiungi Partecipanti
             </TabsTrigger>
-            <TabsTrigger value="enrolled" className="flex items-center gap-2">
+            <TabsTrigger value="teams" className="flex items-center gap-2 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Users className="h-4 w-4" />
+              Teams
+            </TabsTrigger>
+            <TabsTrigger value="enrolled" className="flex items-center gap-2 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <UserMinus className="h-4 w-4" />
               Partecipanti Iscritti
             </TabsTrigger>
@@ -449,7 +486,7 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
                 placeholder="Cerca per titolo o dipartimento..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-10 rounded-md focus-visible:ring-2 focus-visible:ring-primary/30"
               />
             </div>
 
@@ -519,6 +556,60 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
             </div>
           </TabsContent>
 
+          <TabsContent value="teams" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
+            <div className="flex-1 overflow-y-auto space-y-3">
+              {isLoadingTeams ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="ml-2">Caricamento team...</span>
+                </div>
+              ) : teams.length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nessun team disponibile</h3>
+                  <p className="text-muted-foreground">Crea un team dalla sezione Team Management.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {teams.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 hover:shadow-sm transition-all">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{t.name}</p>
+                        {t.description ? (
+                          <p className="text-xs text-muted-foreground">{t.description}</p>
+                        ) : null}
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {t.memberCount} membri • {t.totalPoints} punti totali
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        aria-label={`Aggiungi il team ${t.name} al corso`}
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`/api/courses/${courseId}/teams`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ teamId: t.id }),
+                            })
+                            if (!res.ok) throw new Error('Errore nell\'assegnazione del team')
+                            toast.success('Team assegnato al corso')
+                            onSuccess()
+                          } catch (e) {
+                            console.error(e)
+                            toast.error('Errore nell\'assegnazione del team')
+                          }
+                        }}
+                      >
+                        Aggiungi team
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
           <TabsContent value="enrolled" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
             {/* Barra di ricerca per partecipanti iscritti */}
             <div className="relative">
@@ -527,7 +618,7 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
                 placeholder="Cerca partecipanti iscritti..."
                 value={enrolledSearchQuery}
                 onChange={(e) => setEnrolledSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-10 rounded-md focus-visible:ring-2 focus-visible:ring-primary/30"
               />
             </div>
 

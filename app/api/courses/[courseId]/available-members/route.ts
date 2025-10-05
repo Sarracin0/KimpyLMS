@@ -26,7 +26,7 @@ export async function GET(
       return NextResponse.json({ error: 'Corso non trovato o accesso negato' }, { status: 404 })
     }
 
-    // Ottieni tutti i membri dell'organizzazione
+    // Ottieni tutti i membri dell'organizzazione, includendo i team a cui appartengono
     const allMembers = await db.userProfile.findMany({
       where: { companyId: company.id },
       select: {
@@ -38,6 +38,13 @@ export async function GET(
         avatarUrl: true,
         points: true,
         streakCount: true,
+        memberships: {
+          select: {
+            team: {
+              select: { id: true, name: true },
+            },
+          },
+        },
       },
       orderBy: [
         { role: 'asc' },
@@ -51,16 +58,29 @@ export async function GET(
       select: { userProfileId: true },
     })
 
-    const enrolledUserIds = enrolledMembers.map(e => e.userProfileId)
+    const enrolledUserIds = enrolledMembers.map((e) => e.userProfileId)
 
     // Filtra i membri disponibili (non ancora iscritti)
-    const availableMembers = allMembers.filter(member => !enrolledUserIds.includes(member.id))
+    const availableMembersRaw = allMembers.filter((member) => !enrolledUserIds.includes(member.id))
+
+    // Mappa per includere i team come array semplice { id, name }
+    const availableMembers = availableMembersRaw.map((m) => ({
+      id: m.id,
+      userId: m.userId,
+      role: m.role,
+      jobTitle: m.jobTitle,
+      department: m.department,
+      avatarUrl: m.avatarUrl,
+      points: m.points,
+      streakCount: m.streakCount,
+      teams: m.memberships.map((mm) => mm.team),
+    }))
 
     // Raggruppa per ruolo per una migliore organizzazione
     const membersByRole = {
-      HR_ADMIN: availableMembers.filter(m => m.role === UserRole.HR_ADMIN),
-      TRAINER: availableMembers.filter(m => m.role === UserRole.TRAINER),
-      LEARNER: availableMembers.filter(m => m.role === UserRole.LEARNER),
+      HR_ADMIN: availableMembers.filter((m) => m.role === UserRole.HR_ADMIN),
+      TRAINER: availableMembers.filter((m) => m.role === UserRole.TRAINER),
+      LEARNER: availableMembers.filter((m) => m.role === UserRole.LEARNER),
     }
 
     return NextResponse.json({

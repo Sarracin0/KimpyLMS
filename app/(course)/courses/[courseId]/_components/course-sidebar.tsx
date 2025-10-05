@@ -21,11 +21,11 @@ export default async function CourseSidebar({ course, progressCount }: CourseSid
   const hasChapters = course.chapters.length > 0
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto border-r shadow-sm">
-      <div className="flex flex-col border-b p-8">
-        <h1 className="text-lg font-semibold">{course.title}</h1>
+    <div className="flex h-full flex-col overflow-y-auto border-r border-white/20 bg-white/60 backdrop-blur-md supports-[backdrop-filter]:bg-white/50 rounded-t-2xl shadow-lg">
+      <div className="flex flex-col border-b border-white/20 p-6">
+        <h1 className="text-lg font-semibold text-foreground">{course.title}</h1>
         {enrollment ? (
-          <div className="mt-10">
+          <div className="mt-8">
             <CourseProgress variant="success" value={progressCount} />
           </div>
         ) : null}

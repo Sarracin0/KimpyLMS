@@ -26,8 +26,8 @@ type CourseCardProps = {
 export default function CourseCard({ id, title, imageUrl, moduleCount, progress, category, status }: CourseCardProps) {
   return (
     <Link href={`/courses/${id}`}>
-      <div className="group h-full overflow-hidden rounded-lg border bg-white p-3 transition hover:shadow-md">
-        <div className="relative aspect-video w-full overflow-hidden rounded-md bg-muted">
+      <div className="group h-full overflow-hidden rounded-xl border border-white/30 bg-white/60 p-3 backdrop-blur-md transition hover:bg-white/70 supports-[backdrop-filter]:bg-white/50">
+        <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
           {imageUrl ? (
             <Image fill className="object-cover" alt={title} src={imageUrl} />
           ) : (
@@ -38,12 +38,12 @@ export default function CourseCard({ id, title, imageUrl, moduleCount, progress,
         </div>
 
         <div className="flex flex-col pt-3">
-          <div className="line-clamp-2 text-lg font-semibold transition group-hover:text-primary md:text-base">
+          <div className="line-clamp-2 text-lg font-semibold transition group-hover:text-[#5D62E1] md:text-base">
             {title}
           </div>
           <p className="text-xs text-muted-foreground">{category ?? 'General track'}</p>
           <div className="my-3 flex items-center gap-x-1 text-sm md:text-xs">
-            <div className="flex items-center gap-x-1 text-slate-500">
+            <div className="flex items-center gap-x-1 text-muted-foreground">
               <IconBadge size="sm" icon={BookOpenIcon} />
               <span>
                 {moduleCount} {moduleCount === 1 ? 'Module' : 'Modules'}
@@ -62,7 +62,7 @@ export default function CourseCard({ id, title, imageUrl, moduleCount, progress,
               <CourseProgress variant={progress === 100 ? 'success' : 'default'} size="sm" value={progress} />
             </div>
           ) : (
-            <span className="mt-2 text-sm font-medium text-primary">View course details</span>
+            <span className="mt-2 text-sm font-medium text-[#5D62E1]">View course details</span>
           )}
         </div>
       </div>

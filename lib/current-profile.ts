@@ -1,4 +1,5 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
+import { createClerkClient } from '@clerk/backend'
 import { Prisma, UserRole } from '@prisma/client'
 
 import { db } from './db'
@@ -76,8 +77,18 @@ export async function getCurrentAuthContext() {
     }
   }
 
-  const user = await currentUser()
-  const organizationId = orgId ?? user?.organizationMemberships?.[0]?.organization?.id ?? null
+  const secretKey = process.env.CLERK_SECRET_KEY
+  if (!secretKey) {
+    throw new Error('CLERK_SECRET_KEY is required to resolve the current user')
+  }
+
+  const clerk = createClerkClient({ secretKey })
+
+  const user = await clerk.users.getUser(userId)
+  const membershipsResponse = await clerk.users.getOrganizationMembershipList({ userId })
+  const memberships = membershipsResponse.data as ClerkMembership[]
+
+  const organizationId = orgId ?? memberships[0]?.organization?.id ?? null
 
   if (!organizationId) {
     return {
@@ -89,14 +100,7 @@ export async function getCurrentAuthContext() {
     }
   }
 
-  const membership = getMembershipForOrganization(user?.organizationMemberships, organizationId)
-
-  // 🔍 DEBUG: Verifica cosa arriva da Clerk
-  console.log('🔍 DEBUG - Dati Clerk raw:')
-  console.log('- organizationId:', organizationId)
-  console.log('- user?.organizationMemberships:', JSON.stringify(user?.organizationMemberships, null, 2))
-  console.log('- membership trovata:', JSON.stringify(membership, null, 2))
-  console.log('- organizationName estratto:', membership?.organization?.name)
+  const membership = getMembershipForOrganization(memberships, organizationId)
 
   const organizationName = membership?.organization?.name ?? 'Kimpy'
   const initialSlug = generateCompanySlug(membership?.organization?.slug ?? organizationName)
@@ -164,7 +168,7 @@ export async function getCurrentAuthContext() {
           role: mapClerkRoleToUserRole(membership?.role),
           jobTitle: (user?.publicMetadata?.jobTitle as string | undefined) ?? null,
           department: (user?.publicMetadata?.department as string | undefined) ?? null,
-          avatarUrl: user?.imageUrl ?? null,
+          avatarUrl: user.imageUrl ?? null,
           timezone: (user?.publicMetadata?.timezone as string | undefined) ?? null,
         },
       })
@@ -186,7 +190,7 @@ export async function getCurrentAuthContext() {
       updates.companyId = company.id
     }
 
-    if (user?.imageUrl && user.imageUrl !== profile.avatarUrl) {
+    if (user.imageUrl && user.imageUrl !== profile.avatarUrl) {
       updates.avatarUrl = user.imageUrl
     }
 

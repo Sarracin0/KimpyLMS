@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 type TeamWithMembers = CompanyTeam & {
   memberships: (TeamMembership & {
-    userProfile: Pick<UserProfile, 'id' | 'userId' | 'jobTitle' | 'role'>
+    userProfile: Pick<UserProfile, 'id' | 'userId' | 'jobTitle' | 'role' | 'points'>
   })[]
 }
 
@@ -60,11 +60,15 @@ export const TeamCard = ({ team, availableMembers }: TeamCardProps) => {
     }
   }
 
+  const membersCount = team.memberships.length
+  const totalPoints = team.memberships.reduce((acc, m) => acc + (m.userProfile.points ?? 0), 0)
+
   return (
-    <div className="flex h-full flex-col rounded-lg border bg-white p-4 shadow-sm">
+    <div className="flex h-full flex-col rounded-lg border bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="mb-3">
         <h3 className="text-base font-semibold text-foreground">{team.name}</h3>
         <p className="text-xs text-muted-foreground">{team.description ?? 'No description provided.'}</p>
+        <div className="mt-1 text-xs text-muted-foreground">{membersCount} members • {totalPoints} points</div>
       </div>
 
       <div className="grow space-y-2">
@@ -79,6 +83,8 @@ export const TeamCard = ({ team, availableMembers }: TeamCardProps) => {
               size="sm"
               disabled={isSubmitting}
               onClick={() => onRemoveMember(membership.userProfileId)}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              aria-label={`Remove ${membership.userProfile.userId} from ${team.name}`}
             >
               Remove
             </Button>

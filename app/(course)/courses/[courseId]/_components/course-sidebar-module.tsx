@@ -18,10 +18,10 @@ type CourseSidebarModuleProps = {
 
 export default function CourseSidebarModule({ module, courseId, isLocked }: CourseSidebarModuleProps) {
   return (
-    <AccordionItem value={module.id} className="border-b">
-      <AccordionTrigger className="px-6 py-4 text-sm font-semibold text-slate-700 hover:bg-slate-100/50 hover:no-underline">
+    <AccordionItem value={module.id} className="border-b border-white/10">
+      <AccordionTrigger className="group px-4 py-3 text-sm font-semibold text-foreground/90 hover:bg-white/40 hover:no-underline rounded-md transition-colors">
         <div className="flex items-center gap-2">
-          <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+          <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
           <span className="text-left">{module.title}</span>
         </div>
       </AccordionTrigger>
@@ -38,7 +38,7 @@ export default function CourseSidebarModule({ module, courseId, isLocked }: Cour
             ))}
           </Accordion>
         ) : (
-          <div className="px-6 py-4 text-sm text-slate-500">Nessuna lezione disponibile</div>
+          <div className="px-6 py-4 text-sm text-muted-foreground">Nessuna lezione disponibile</div>
         )}
       </AccordionContent>
     </AccordionItem>

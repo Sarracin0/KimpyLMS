@@ -14,7 +14,7 @@ export default async function ManageTeamsPage() {
         memberships: {
           include: {
             userProfile: {
-              select: { id: true, userId: true, jobTitle: true, role: true },
+              select: { id: true, userId: true, jobTitle: true, role: true, points: true },
             },
           },
         },
@@ -37,7 +37,7 @@ export default async function ManageTeamsPage() {
         </p>
       </div>
 
-      <NewTeamForm />
+      <NewTeamForm availableMembers={members} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {teams.map((team) => (

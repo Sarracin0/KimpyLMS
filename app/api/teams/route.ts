@@ -21,6 +21,7 @@ export async function GET() {
                 jobTitle: true,
                 role: true,
                 avatarUrl: true,
+                points: true,
               },
             },
           },

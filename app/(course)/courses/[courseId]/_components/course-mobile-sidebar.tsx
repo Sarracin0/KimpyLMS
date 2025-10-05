@@ -15,7 +15,7 @@ export default function CourseMobileSidebar({ course, progressCount }: CourseMob
         <MenuIcon />
       </SheetTrigger>
 
-      <SheetContent side="left" className="w-72 bg-white p-0">
+      <SheetContent side="left" className="w-72 bg-white/70 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 p-0">
         <CourseSidebar course={course} progressCount={progressCount} />
       </SheetContent>
     </Sheet>

@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server'
 import { createRouteHandler } from 'uploadthing/next'
 
 import { ourFileRouter } from './core'
@@ -14,8 +13,7 @@ export async function POST(request: Request) {
 
   if (hook) {
     console.info('[UPLOADTHING] Hook received', hook)
-    // Silently acknowledge UploadThing dev callbacks (callback/error)
-    return new NextResponse('OK', { status: 200 })
+    // Forward to UploadThing handler so dev callbacks are processed correctly
   }
 
   return handler.POST(request)

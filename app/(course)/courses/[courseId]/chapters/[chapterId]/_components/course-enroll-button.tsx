@@ -32,7 +32,12 @@ export default function CourseEnrollButton({ courseId, userProfileId }: CourseEn
   }
 
   return (
-    <Button className="w-full md:w-auto" size="sm" onClick={onClick} disabled={isLoading}>
+    <Button
+      className="w-full bg-[#5D62E1] text-white hover:bg-[#5055c9] md:w-auto"
+      size="sm"
+      onClick={onClick}
+      disabled={isLoading}
+    >
       Enroll now
     </Button>
   )

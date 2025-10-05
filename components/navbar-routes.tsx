@@ -28,7 +28,11 @@ export const NavbarRoutes = () => {
       <div className="ml-auto flex items-center gap-x-2">
         {canManage ? (
           <Link href={isManageRoute ? '/courses' : '/manage/courses'}>
-            <Button size="sm" variant={isManageRoute ? 'outline' : 'default'} className="hidden items-center gap-2 md:inline-flex">
+            <Button
+              size="sm"
+              variant={isManageRoute ? 'outline' : 'default'}
+              className={`hidden items-center gap-2 md:inline-flex ${!isManageRoute ? 'bg-[#5D62E1] text-white hover:bg-[#5055c9]' : 'text-[#5D62E1] border-[#5D62E1] hover:bg-[#5D62E1]/10'}`}
+            >
               {isManageRoute ? <Plus className="h-4 w-4" /> : <Briefcase className="h-4 w-4" />}
               {isManageRoute ? 'New Course' : 'Manage Space'}
             </Button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { LockIcon, PlayCircleIcon, FileTextIcon, VideoIcon } from 'lucide-react'
+import { LockIcon, PlayCircleIcon, FileTextIcon, VideoIcon, Sparkles } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { BlockData } from './course-sidebar.types'
@@ -31,6 +31,8 @@ export default function CourseSidebarBlock({ block, lessonId, courseId, isLocked
         return FileTextIcon
       case 'LIVE_SESSION':
         return PlayCircleIcon
+      case 'GAMIFICATION':
+        return Sparkles
       default:
         return FileTextIcon
     }
@@ -42,8 +44,68 @@ export default function CourseSidebarBlock({ block, lessonId, courseId, isLocked
 
   const onClick = () => {
     if (isLocked) return
-    // Naviga alla route del blocco (da implementare nel routing)
-    router.push(`/courses/${courseId}/lessons/${lessonId}/blocks/${block.id}`)
+
+    // Comportamento per tipo di blocco
+    switch (block.type) {
+      case 'QUIZ': {
+        // Apri la pagina quiz per questo block
+        router.push(`/courses/${courseId}/quizzes/${block.id}`)
+        return
+      }
+      case 'GAMIFICATION': {
+        const contentType = block.gamification?.contentType
+
+        if (contentType === 'FLASHCARDS') {
+          const deckId = block.gamification?.flashcardDeck?.id
+          if (deckId) {
+            router.push(`/courses/${courseId}/flashcards/${deckId}`)
+            return
+          }
+        }
+
+        // Fallback to quiz experience if the deck is not available or the content is a quiz
+        router.push(`/courses/${courseId}/quizzes/${block.id}`)
+        return
+      }
+      case 'RESOURCES': {
+        // Apri direttamente la risorsa se disponibile; altrimenti prova la chapter legacy
+        if (block.contentUrl) {
+          window.open(block.contentUrl, '_blank', 'noopener,noreferrer')
+          return
+        }
+        if (block.legacyChapterId) {
+          router.push(`/courses/${courseId}/chapters/${block.legacyChapterId}`)
+          return
+        }
+        router.push(`/courses/${courseId}`)
+        return
+      }
+      case 'LIVE_SESSION': {
+        // Preferisci la chapter legacy (mostra scheda aula virtuale)
+        if (block.legacyChapterId) {
+          router.push(`/courses/${courseId}/chapters/${block.legacyChapterId}`)
+          return
+        }
+        // Poi prova il link diretto: prima contentUrl, poi liveSession.meetingUrl
+        const joinUrl = block.contentUrl || block.liveSession?.meetingUrl
+        if (joinUrl) {
+          window.open(joinUrl, '_blank', 'noopener,noreferrer')
+          return
+        }
+        // In ultima istanza apri la lista delle live sessions (mock)
+        router.push(`/live-sessions`)
+        return
+      }
+      default: {
+        // VIDEO_LESSON (o default): vai alla chapter legacy se presente
+        if (block.legacyChapterId) {
+          router.push(`/courses/${courseId}/chapters/${block.legacyChapterId}`)
+          return
+        }
+        router.push(`/courses/${courseId}`)
+        return
+      }
+    }
   }
 
   return (

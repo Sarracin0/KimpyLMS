@@ -30,27 +30,27 @@ export default function CourseSidebarItem({ id, label, isCompleted, courseId, is
       onClick={onClick}
       type="button"
       className={cn(
-        'flex items-center gap-x-2 pl-6 text-sm font-medium text-slate-500 transition-all hover:bg-slate-300/20 hover:text-slate-600',
+        'group relative flex w-full items-center gap-3 px-4 pl-6 py-3 text-sm font-medium text-muted-foreground rounded-md transition-colors hover:text-foreground hover:bg-white/40',
         {
-          'cursor-not-allowed opacity-60 hover:bg-transparent hover:text-slate-500': isLocked,
-          'bg-slate-200/20 text-slate-700 hover:bg-slate-200/20 hover:text-slate-700': isActive,
+          'cursor-not-allowed opacity-60 hover:bg-transparent hover:text-muted-foreground': isLocked,
+          'bg-white/50 text-foreground shadow-sm ring-1 ring-white/30 hover:bg-white/50': isActive,
           'text-emerald-700 hover:text-emerald-700': isCompleted,
-          'bg-emerald-200/20 ': isCompleted && isActive,
+          'ring-1 ring-emerald-300/40': isCompleted && isActive,
         },
       )}
     >
-      <div className="flex items-center gap-x-2 py-4">
+      <div className="flex items-center gap-x-2 py-3">
         <Icon
           size={22}
-          className={cn('text-slate-500', { 'text-slate-700': isActive, 'text-emerald-700': isCompleted })}
+          className={cn('text-muted-foreground', { 'text-foreground': isActive, 'text-emerald-700': isCompleted })}
         />
         {label}
       </div>
 
       <div
-        className={cn('ml-auto h-full border-2 border-slate-700 opacity-0 transition-all', {
+        className={cn('ml-auto h-5 w-1 rounded-full bg-foreground/60 opacity-0 transition-opacity', {
           'opacity-100': isActive,
-          'border-emerald-700': isCompleted,
+          'bg-emerald-600': isCompleted,
         })}
       />
     </button>

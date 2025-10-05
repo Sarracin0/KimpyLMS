@@ -1,6 +1,6 @@
 'use client'
 
-import { Dispatch, SetStateAction, useMemo, useState } from 'react'
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import {
@@ -133,6 +133,53 @@ const iconToComponent = (iconKey?: string | null) => {
     default:
       return Award
   }
+}
+
+function EnableLeaderboardToggle({ courseId }: { courseId: string }) {
+  // Inline client component that fetches and toggles the course flag via PATCH
+  const [enabled, setEnabled] = useState<boolean | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    // Minimal fetch to read current flag
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/courses/${courseId}`, { method: 'GET' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled) setEnabled(Boolean(data.isLeaderboardEnabled))
+      } catch {
+        // ignore
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [courseId])
+
+  const toggle = async () => {
+    if (enabled == null) return
+    setSaving(true)
+    try {
+      await axios.patch(`/api/courses/${courseId}`, { isLeaderboardEnabled: !enabled })
+      setEnabled((v) => !v)
+      toast.success(!enabled ? 'Leaderboard abilitata' : 'Leaderboard disabilitata')
+    } catch {
+      toast.error('Impossibile aggiornare la leaderboard')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mt-2 inline-flex items-center gap-3 rounded-lg border border-border/40 bg-card/80 px-3 py-2">
+      <span className="text-xs text-muted-foreground">Leaderboard del corso</span>
+      <Button type="button" size="sm" variant={enabled ? 'default' : 'outline'} onClick={toggle} disabled={saving || enabled == null}>
+        {enabled ? 'Abilitata' : 'Disabilitata'}
+      </Button>
+    </div>
+  )
 }
 
 export const CourseAchievementsPanel = ({
@@ -287,11 +334,13 @@ export const CourseAchievementsPanel = ({
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border/60 bg-muted/30 p-6 shadow-sm md:flex-row md:items-center md:justify-between">
-        <div>
+        <div className="space-y-1">
           <h3 className="text-base font-semibold text-foreground">Achievement hub</h3>
           <p className="text-sm text-muted-foreground">
             Crea ricompense rapide e tieni traccia dei punti assegnati quando i learner avanzano nel corso.
           </p>
+          {/* Leaderboard toggle lives here to keep gamification settings together */}
+          <EnableLeaderboardToggle courseId={courseId} />
         </div>
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
           <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>

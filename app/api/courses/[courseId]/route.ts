@@ -9,6 +9,19 @@ type RouteParams = Promise<{
   courseId: string
 }>
 
+export async function GET(request: NextRequest, { params }: { params: RouteParams }) {
+  try {
+    const { company } = await requireAuthContext()
+    const { courseId } = await params
+    const course = await db.course.findFirst({ where: { id: courseId, companyId: company.id } })
+    if (!course) return new NextResponse('Not found', { status: 404 })
+    return NextResponse.json(course)
+  } catch (error) {
+    logError('COURSE_GET', error)
+    return new NextResponse('Internal Server Error', { status: 500 })
+  }
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: RouteParams }) {
   try {
     const { profile, company } = await requireAuthContext()
@@ -34,6 +47,7 @@ export async function PATCH(request: NextRequest, { params }: { params: RoutePar
       level,
       learningOutcomes,
       prerequisites,
+      isLeaderboardEnabled,
     } = await request.json()
 
     const updatedCourse = await db.course.update({
@@ -47,6 +61,7 @@ export async function PATCH(request: NextRequest, { params }: { params: RoutePar
         level,
         learningOutcomes,
         prerequisites,
+        isLeaderboardEnabled: typeof isLeaderboardEnabled === 'boolean' ? isLeaderboardEnabled : undefined,
       },
     })
 
