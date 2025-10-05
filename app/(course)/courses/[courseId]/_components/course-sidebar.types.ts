@@ -10,11 +10,15 @@ export type BlockData = {
   contentUrl?: string | null
   liveSession?: { meetingUrl: string | null } | null
   gamification?: {
-    contentType: 'QUIZ' | 'FLASHCARDS'
+    contentType: 'QUIZ' | 'FLASHCARDS' | 'SCENARIO'
     quizId?: string | null
     flashcardDeck?: {
       id: string
       title: string | null
+    } | null
+    scenarioSummary?: {
+      intro: string | null
+      nodeCount: number
     } | null
   } | null
 }

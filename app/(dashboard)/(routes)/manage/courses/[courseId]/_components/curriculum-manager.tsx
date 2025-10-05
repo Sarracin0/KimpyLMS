@@ -11,8 +11,6 @@ import type {
   FlashcardCard as DbFlashcardCard,
   FlashcardDeck as DbFlashcardDeck,
   GamificationBlock as DbGamificationBlock,
-  GamificationContentType,
-  GamificationStatus,
   Quiz as DbQuiz,
   QuizOption as DbQuizOption,
   QuizQuestion as DbQuizQuestion,
@@ -29,6 +27,7 @@ import {
   type LessonBlock,
   type VirtualClassroomConfig,
 } from './module-accordion'
+import { extractScenarioPayload, summarizeScenario } from '@/lib/gamification/scenario'
 
 type QuizPayload = DbQuiz & { questions: (DbQuizQuestion & { options: DbQuizOption[] })[] }
 type GamificationPayload = DbGamificationBlock & {
@@ -85,31 +84,37 @@ const mapFlashcardDeck = (deck?: (DbFlashcardDeck & { cards: DbFlashcardCard[] }
   }
 }
 
-const mapBlockFromDb = (block: BlockPayload): LessonBlock => ({
-  id: block.id,
-  type: block.type,
-  title: block.title,
-  content: block.content ?? '',
-  videoUrl: block.videoUrl ?? '',
-  contentUrl: block.contentUrl ?? '',
-  position: block.position,
-  isPublished: block.isPublished,
-  liveSessionConfig: (block.liveSessionConfig as VirtualClassroomConfig | null) ?? null,
-  attachments: block.attachments?.map(mapAttachmentFromDb) ?? [],
-  quizSummary: mapQuizSummary(block.quiz ?? block.gamification?.quiz ?? null),
-  gamification: block.gamification
-    ? {
-        id: block.gamification.id,
-        status: block.gamification.status,
-        contentType: block.gamification.contentType,
-        quizId: block.gamification.quiz?.id ?? block.quiz?.id ?? null,
-        sourceAttachmentIds: block.gamification.sourceAttachmentIds,
-        config: (block.gamification.config as Record<string, unknown> | null) ?? null,
-        flashcardDeck: mapFlashcardDeck(block.gamification.flashcardDeck ?? null),
-        quizSummary: mapQuizSummary(block.gamification.quiz ?? block.quiz ?? null),
-      }
-    : null,
-})
+const mapBlockFromDb = (block: BlockPayload): LessonBlock => {
+  const scenarioPayload = extractScenarioPayload(block.gamification?.result ?? null)
+  const scenarioSummary = scenarioPayload ? summarizeScenario(scenarioPayload) : null
+
+  return {
+    id: block.id,
+    type: block.type,
+    title: block.title,
+    content: block.content ?? '',
+    videoUrl: block.videoUrl ?? '',
+    contentUrl: block.contentUrl ?? '',
+    position: block.position,
+    isPublished: block.isPublished,
+    liveSessionConfig: (block.liveSessionConfig as VirtualClassroomConfig | null) ?? null,
+    attachments: block.attachments?.map(mapAttachmentFromDb) ?? [],
+    quizSummary: mapQuizSummary(block.quiz ?? block.gamification?.quiz ?? null),
+    gamification: block.gamification
+      ? {
+          id: block.gamification.id,
+          status: block.gamification.status,
+          contentType: block.gamification.contentType,
+          quizId: block.gamification.quiz?.id ?? block.quiz?.id ?? null,
+          sourceAttachmentIds: block.gamification.sourceAttachmentIds,
+          config: (block.gamification.config as Record<string, unknown> | null) ?? null,
+          flashcardDeck: mapFlashcardDeck(block.gamification.flashcardDeck ?? null),
+          quizSummary: mapQuizSummary(block.gamification.quiz ?? block.quiz ?? null),
+          scenarioSummary,
+        }
+      : null,
+  }
+}
 
 const mapLessonFromDb = (lesson: LessonPayload): Lesson => ({
   id: lesson.id,

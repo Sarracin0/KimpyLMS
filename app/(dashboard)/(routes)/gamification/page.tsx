@@ -73,7 +73,7 @@ export default async function GamificationPage() {
     )
   }
 
-  const [badgeAwards, quizList, topProfiles] = await Promise.all([
+  const [badgeAwards, quizList, topProfiles, scenarioAttempts] = await Promise.all([
     db.userBadge.findMany({
       where: {
         badge: {
@@ -113,6 +113,40 @@ export default async function GamificationPage() {
       select: { id: true, userId: true, points: true, role: true, jobTitle: true, department: true },
       orderBy: { points: 'desc' },
       take: 10,
+    }),
+    db.scenarioAttempt.findMany({
+      where: {
+        gamificationBlock: {
+          lessonBlock: {
+            lesson: {
+              module: {
+                course: { companyId: company.id },
+              },
+            },
+          },
+        },
+      },
+      include: {
+        gamificationBlock: {
+          include: {
+            lessonBlock: {
+              include: {
+                lesson: {
+                  include: {
+                    module: {
+                      include: {
+                        course: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 250,
     }),
   ])
 
@@ -175,6 +209,135 @@ export default async function GamificationPage() {
       passRate: entry.totalAttempts > 0 ? Math.round((entry.passCount * 100) / entry.totalAttempts) : 0,
     }))
     .sort((a, b) => b.totalAttempts - a.totalAttempts)
+
+  type ScenarioAccumulator = {
+    courseId: string
+    courseTitle: string
+    attemptCount: number
+    totalScore: number
+    totalRisk: number
+    riskSamples: number
+    highRiskDecisions: number
+    totalDecisions: number
+    competencyCounts: Map<string, number>
+  }
+
+  const scenarioByCourse = scenarioAttempts.reduce((map, attempt) => {
+    const course = attempt.gamificationBlock?.lessonBlock?.lesson?.module?.course
+    if (!course) return map
+
+    const entry: ScenarioAccumulator = map.get(course.id) ?? {
+      courseId: course.id,
+      courseTitle: course.title,
+      attemptCount: 0,
+      totalScore: 0,
+      totalRisk: 0,
+      riskSamples: 0,
+      highRiskDecisions: 0,
+      totalDecisions: 0,
+      competencyCounts: new Map<string, number>(),
+    }
+
+    entry.attemptCount += 1
+    entry.totalScore += attempt.score ?? 0
+    if (typeof attempt.riskLevel === 'number') {
+      entry.totalRisk += attempt.riskLevel
+      entry.riskSamples += 1
+    }
+
+    const path = Array.isArray(attempt.path) ? (attempt.path as unknown[]) : []
+    for (const step of path) {
+      if (!step || typeof step !== 'object') continue
+      const record = step as { type?: unknown; impact?: { risk?: unknown; competencyTags?: unknown } }
+      if (record.type === 'decision') {
+        const risk = typeof record.impact?.risk === 'number' ? record.impact.risk : 0
+        entry.totalDecisions += 1
+        if (risk >= 70) {
+          entry.highRiskDecisions += 1
+        }
+        const tags = Array.isArray(record.impact?.competencyTags) ? record.impact?.competencyTags : []
+        for (const tag of tags) {
+          if (typeof tag === 'string' && tag.trim().length > 0) {
+            const normalized = tag.trim()
+            entry.competencyCounts.set(normalized, (entry.competencyCounts.get(normalized) ?? 0) + 1)
+          }
+        }
+      }
+    }
+
+    map.set(course.id, entry)
+    return map
+  }, new Map<string, ScenarioAccumulator>())
+
+  let overallScenarioAttempts = 0
+  let overallScenarioScore = 0
+  let overallScenarioRisk = 0
+  let overallScenarioRiskSamples = 0
+  let overallHighRiskDecisions = 0
+  let overallDecisionCount = 0
+  const overallCompetencyCounts = new Map<string, number>()
+
+  const scenarioStats = Array.from(scenarioByCourse.values())
+    .map((entry) => {
+      overallScenarioAttempts += entry.attemptCount
+      overallScenarioScore += entry.totalScore
+      overallScenarioRisk += entry.totalRisk
+      overallScenarioRiskSamples += entry.riskSamples
+      overallHighRiskDecisions += entry.highRiskDecisions
+      overallDecisionCount += entry.totalDecisions
+      for (const [tag, count] of entry.competencyCounts.entries()) {
+        overallCompetencyCounts.set(tag, (overallCompetencyCounts.get(tag) ?? 0) + count)
+      }
+
+      const topCompetencies = Array.from(entry.competencyCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([tag, count]) => ({ tag, count }))
+
+      return {
+        courseId: entry.courseId,
+        courseTitle: entry.courseTitle,
+        attemptCount: entry.attemptCount,
+        avgScore: entry.attemptCount ? Math.round(entry.totalScore / entry.attemptCount) : 0,
+        avgRisk: entry.riskSamples ? Math.round(entry.totalRisk / entry.riskSamples) : null,
+        highRiskRate: entry.totalDecisions ? Math.round((entry.highRiskDecisions * 100) / entry.totalDecisions) : 0,
+        topCompetencies,
+      }
+    })
+    .sort((a, b) => b.attemptCount - a.attemptCount)
+
+  const overallScenarioMetrics = {
+    attempts: overallScenarioAttempts,
+    avgScore: overallScenarioAttempts ? Math.round(overallScenarioScore / overallScenarioAttempts) : 0,
+    avgRisk: overallScenarioRiskSamples ? Math.round(overallScenarioRisk / overallScenarioRiskSamples) : null,
+    highRiskRate: overallDecisionCount ? Math.round((overallHighRiskDecisions * 100) / overallDecisionCount) : 0,
+    topCompetencies: Array.from(overallCompetencyCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([tag, count]) => ({ tag, count })),
+  }
+
+  const recentReflections = scenarioAttempts
+    .flatMap((attempt) => {
+      const course = attempt.gamificationBlock?.lessonBlock?.lesson?.module?.course
+      const blockTitle = attempt.gamificationBlock?.lessonBlock?.title ?? 'Decision Lab'
+      const reflections = Array.isArray(attempt.reflections) ? (attempt.reflections as unknown[]) : []
+      return reflections
+        .filter((item): item is { nodeId?: unknown; response?: unknown } => !!item && typeof item === 'object')
+        .map((item) => {
+          const record = item as { nodeId?: unknown; response?: unknown }
+          const responseText = typeof record.response === 'string' ? record.response : ''
+          return {
+            id: `${attempt.id}-${record.nodeId ?? 'reflection'}`,
+            courseTitle: course?.title ?? 'Course',
+            blockTitle,
+            createdAt: attempt.createdAt,
+            response: responseText,
+          }
+        })
+        .filter((entry) => entry.response.trim().length > 0)
+    })
+    .slice(0, 6)
 
   return (
     <div className="space-y-8 p-6">
@@ -267,6 +430,113 @@ export default async function GamificationPage() {
             ) : null}
           </CardContent>
         </Card>
+      </section>
+
+      <section className="space-y-4">
+        <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-base">Decision Labs overview</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Monitor performance and risk appetite across interactive scenarios.
+            </p>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-4">
+            <div className="rounded-md border border-border/40 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">Attempts logged</p>
+              <p className="text-lg font-semibold text-foreground">{overallScenarioMetrics.attempts}</p>
+            </div>
+            <div className="rounded-md border border-border/40 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">Average score</p>
+              <p className="text-lg font-semibold text-foreground">{overallScenarioMetrics.avgScore}</p>
+            </div>
+            <div className="rounded-md border border-border/40 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">Average risk</p>
+              <p className="text-lg font-semibold text-foreground">
+                {overallScenarioMetrics.avgRisk !== null ? `${overallScenarioMetrics.avgRisk}` : '—'}
+              </p>
+            </div>
+            <div className="rounded-md border border-border/40 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">High-risk decisions</p>
+              <p className="text-lg font-semibold text-foreground">{overallScenarioMetrics.highRiskRate}%</p>
+            </div>
+            <div className="md:col-span-4">
+              <p className="text-xs font-semibold text-muted-foreground">Trending competencies</p>
+              {overallScenarioMetrics.topCompetencies.length ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {overallScenarioMetrics.topCompetencies.map(({ tag, count }) => (
+                    <Badge key={tag} variant="outline" className="text-xs">
+                      {tag} · {count}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-muted-foreground">Run Decision Labs to surface competency insights.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {scenarioStats.length ? (
+          <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Scenario performance by course</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 overflow-x-auto">
+              <table className="w-full min-w-[600px] text-left text-xs">
+                <thead>
+                  <tr className="text-muted-foreground">
+                    <th className="py-2 font-semibold">Course</th>
+                    <th className="py-2 font-semibold">Attempts</th>
+                    <th className="py-2 font-semibold">Avg score</th>
+                    <th className="py-2 font-semibold">Avg risk</th>
+                    <th className="py-2 font-semibold">High-risk choices</th>
+                    <th className="py-2 font-semibold">Focus</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {scenarioStats.map((entry) => (
+                    <tr key={entry.courseId}>
+                      <td className="py-2 text-sm font-medium text-foreground">{entry.courseTitle}</td>
+                      <td className="py-2 text-sm text-muted-foreground">{entry.attemptCount}</td>
+                      <td className="py-2 text-sm text-muted-foreground">{entry.avgScore}</td>
+                      <td className="py-2 text-sm text-muted-foreground">{entry.avgRisk !== null ? entry.avgRisk : '—'}</td>
+                      <td className="py-2 text-sm text-muted-foreground">{entry.highRiskRate}%</td>
+                      <td className="py-2 text-sm text-muted-foreground">
+                        {entry.topCompetencies.length
+                          ? entry.topCompetencies.map(({ tag }) => tag).join(', ')
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              Nessun Decision Lab completato finora. Genera uno scenario dal builder per raccogliere insight comportamentali.
+            </CardContent>
+          </Card>
+        )}
+
+        {recentReflections.length ? (
+          <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Recent reflections</CardTitle>
+              <p className="text-xs text-muted-foreground">Le risposte aperte aiutano a indirizzare il coaching individuale.</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {recentReflections.map((item) => (
+                <div key={item.id} className="rounded-md border border-border/40 bg-background/70 p-3 text-xs text-muted-foreground">
+                  <p className="mb-1 text-[11px] font-semibold text-foreground">{item.courseTitle} · {item.blockTitle}</p>
+                  <p className="text-sm text-foreground">“{item.response.length > 220 ? `${item.response.slice(0, 220)}…` : item.response}”</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(item.createdAt)}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
       </section>
 
       <section>

@@ -105,6 +105,7 @@ enum AttachmentScope {
 enum GamificationContentType {
   QUIZ
   FLASHCARDS
+  SCENARIO
 }
 
 enum GamificationStatus {
@@ -125,15 +126,15 @@ model Company {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  profiles     UserProfile[]
-  teams        CompanyTeam[]
-  courses      Course[]
-  categories   Category[]
-  badges       Badge[]
-  quests       Quest[]
-  leaderboards Leaderboard[]
-  liveSessions LiveSession[]
-  quizzes      Quiz[]
+  profiles       UserProfile[]
+  teams          CompanyTeam[]
+  courses        Course[]
+  categories     Category[]
+  badges         Badge[]
+  quests         Quest[]
+  leaderboards   Leaderboard[]
+  liveSessions   LiveSession[]
+  quizzes        Quiz[]
   flashcardDecks FlashcardDeck[]
 }
 
@@ -153,22 +154,22 @@ model UserProfile {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  company                 Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company                 Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
   memberships             TeamMembership[]
-  teamsCreated            CompanyTeam[]          @relation("TeamCreatedBy")
-  createdCourses          Course[]               @relation("CourseCreatedBy")
+  teamsCreated            CompanyTeam[]           @relation("TeamCreatedBy")
+  createdCourses          Course[]                @relation("CourseCreatedBy")
   enrollments             CourseEnrollment[]
-  enrollmentsAssigned     CourseEnrollment[]     @relation("CourseEnrollmentAssignedBy")
-  teamAssignmentsAssigned CourseTeamAssignment[] @relation("CourseTeamAssignmentAssignedBy")
+  enrollmentsAssigned     CourseEnrollment[]      @relation("CourseEnrollmentAssignedBy")
+  teamAssignmentsAssigned CourseTeamAssignment[]  @relation("CourseTeamAssignmentAssignedBy")
   progress                UserProgress[]
   badges                  UserBadge[]
-  badgesAwarded           UserBadge[]            @relation("UserBadgeAwardedBy")
+  badgesAwarded           UserBadge[]             @relation("UserBadgeAwardedBy")
   pointsLog               UserPoints[]
-  questsCreated           Quest[]                @relation("QuestCreatedBy")
-  questAssignments        QuestAssignment[]      @relation("QuestAssignmentAssignedBy")
-  questParticipations     QuestAssignment[]      @relation("QuestAssignmentUser")
-  liveSessionsHosted      LiveSession[]          @relation("LiveSessionHost")
-  leaderboardEntries      LeaderboardEntry[]     @relation("LeaderboardEntryUser")
+  questsCreated           Quest[]                 @relation("QuestCreatedBy")
+  questAssignments        QuestAssignment[]       @relation("QuestAssignmentAssignedBy")
+  questParticipations     QuestAssignment[]       @relation("QuestAssignmentUser")
+  liveSessionsHosted      LiveSession[]           @relation("LiveSessionHost")
+  leaderboardEntries      LeaderboardEntry[]      @relation("LeaderboardEntryUser")
   lessonProgress          UserLessonProgress[]
   achievementsUnlocked    UserCourseAchievement[]
   achievementsCreated     CourseAchievement[]     @relation("CourseAchievementCreatedBy")
@@ -176,6 +177,7 @@ model UserProfile {
   quizAttempts            QuizAttempt[]           @relation("QuizAttemptUser")
   gamificationRequests    GamificationBlock[]
   flashcardDecksCreated   FlashcardDeck[]
+  scenarioAttempts        ScenarioAttempt[]
 }
 
 model CompanyTeam {
@@ -251,15 +253,15 @@ model Course {
 }
 
 model Attachment {
-  id        String   @id @default(cuid())
+  id        String          @id @default(cuid())
   courseId  String
   chapterId String?
   name      String
   url       String
   type      String?
   scope     AttachmentScope @default(LESSON)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
   course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   chapter Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
@@ -286,7 +288,7 @@ model Chapter {
   progress    UserProgress[]
   missions    QuestMission[]
   attachments Attachment[]
-  lessonBlock LessonBlock?  @relation("LessonBlockChapter")
+  lessonBlock LessonBlock?   @relation("LessonBlockChapter")
 
   @@index([courseId])
 }
@@ -481,9 +483,9 @@ model LiveSession {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  company Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  course  Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  host    UserProfile @relation("LiveSessionHost", fields: [hostId], references: [id])
+  company Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  course  Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  host    UserProfile   @relation("LiveSessionHost", fields: [hostId], references: [id])
   blocks  LessonBlock[]
 }
 
@@ -498,8 +500,8 @@ model CourseModule {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons Lesson[]
+  course       Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons      Lesson[]
   achievements CourseAchievement[]
 
   @@index([courseId])
@@ -517,9 +519,9 @@ model Lesson {
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
-  module  CourseModule        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  blocks  LessonBlock[]
-  progress UserLessonProgress[]
+  module       CourseModule         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  blocks       LessonBlock[]
+  progress     UserLessonProgress[]
   achievements CourseAchievement[]
 
   @@index([moduleId])
@@ -538,65 +540,84 @@ model LessonBlock {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  lesson      Lesson                  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  attachments LessonBlockAttachment[]
-  legacyChapterId String?  @unique
-  legacyChapter   Chapter? @relation("LessonBlockChapter", fields: [legacyChapterId], references: [id], onDelete: SetNull)
-  liveSessionId      String?
-  liveSession        LiveSession? @relation(fields: [liveSessionId], references: [id], onDelete: SetNull)
-  liveSessionConfig  Json?
+  lesson            Lesson                  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  attachments       LessonBlockAttachment[]
+  legacyChapterId   String?                 @unique
+  legacyChapter     Chapter?                @relation("LessonBlockChapter", fields: [legacyChapterId], references: [id], onDelete: SetNull)
+  liveSessionId     String?
+  liveSession       LiveSession?            @relation(fields: [liveSessionId], references: [id], onDelete: SetNull)
+  liveSessionConfig Json?
 
-  quiz Quiz? @relation("BlockQuiz")
+  quiz         Quiz?              @relation("BlockQuiz")
   gamification GamificationBlock?
 
   @@index([lessonId])
 }
 
 model GamificationBlock {
-  id                    String                  @id @default(cuid())
-  lessonBlockId         String                  @unique
-  requestedById         String
-  contentType           GamificationContentType
-  status                GamificationStatus      @default(DRAFT)
-  sourceAttachmentIds   String[]                @default([])
-  config                Json?
-  result                Json?
-  openAiRunId           String?
-  quizId                String?                 @unique
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
+  id                  String                  @id @default(cuid())
+  lessonBlockId       String                  @unique
+  requestedById       String
+  contentType         GamificationContentType
+  status              GamificationStatus      @default(DRAFT)
+  sourceAttachmentIds String[]                @default([])
+  config              Json?
+  result              Json?
+  openAiRunId         String?
+  quizId              String?                 @unique
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
 
-  lessonBlock LessonBlock @relation(fields: [lessonBlockId], references: [id], onDelete: Cascade)
-  requestedBy UserProfile @relation(fields: [requestedById], references: [id], onDelete: Cascade)
-  quiz        Quiz?        @relation("GamificationQuiz", fields: [quizId], references: [id], onDelete: SetNull)
-  flashcardDeck FlashcardDeck?
+  lessonBlock      LessonBlock       @relation(fields: [lessonBlockId], references: [id], onDelete: Cascade)
+  requestedBy      UserProfile       @relation(fields: [requestedById], references: [id], onDelete: Cascade)
+  quiz             Quiz?             @relation("GamificationQuiz", fields: [quizId], references: [id], onDelete: SetNull)
+  flashcardDeck    FlashcardDeck?
+  scenarioAttempts ScenarioAttempt[]
 
   @@index([requestedById])
 }
 
+model ScenarioAttempt {
+  id                  String   @id @default(cuid())
+  gamificationBlockId String
+  userProfileId       String
+  path                Json
+  score               Int      @default(0)
+  riskLevel           Int?
+  reflections         Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  gamificationBlock GamificationBlock @relation(fields: [gamificationBlockId], references: [id], onDelete: Cascade)
+  userProfile       UserProfile       @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@index([gamificationBlockId])
+  @@index([userProfileId])
+}
+
 model Quiz {
-  id                 String    @id @default(cuid())
+  id                 String   @id @default(cuid())
   companyId          String
   createdByProfileId String
   lessonBlockId      String   @unique
   title              String
   description        String?
-  passScore          Int       @default(70)
+  passScore          Int      @default(70)
   maxAttempts        Int?
   timeLimitSeconds   Int?
-  shuffleQuestions   Boolean   @default(false)
-  shuffleOptions     Boolean   @default(false)
-  pointsReward       Int       @default(0)
-  isPublished        Boolean   @default(false)
-  autoGenerated      Boolean   @default(false)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  shuffleQuestions   Boolean  @default(false)
+  shuffleOptions     Boolean  @default(false)
+  pointsReward       Int      @default(0)
+  isPublished        Boolean  @default(false)
+  autoGenerated      Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdBy  UserProfile @relation("QuizCreatedBy", fields: [createdByProfileId], references: [id], onDelete: Cascade)
-  lessonBlock LessonBlock @relation("BlockQuiz", fields: [lessonBlockId], references: [id], onDelete: Cascade)
-  questions  QuizQuestion[]
-  attempts   QuizAttempt[]
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy    UserProfile        @relation("QuizCreatedBy", fields: [createdByProfileId], references: [id], onDelete: Cascade)
+  lessonBlock  LessonBlock        @relation("BlockQuiz", fields: [lessonBlockId], references: [id], onDelete: Cascade)
+  questions    QuizQuestion[]
+  attempts     QuizAttempt[]
   gamification GamificationBlock? @relation("GamificationQuiz")
 
   @@index([companyId])
@@ -615,10 +636,10 @@ model FlashcardDeck {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  company          Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdBy        UserProfile    @relation(fields: [createdByProfileId], references: [id], onDelete: Cascade)
+  company           Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy         UserProfile       @relation(fields: [createdByProfileId], references: [id], onDelete: Cascade)
   gamificationBlock GamificationBlock @relation(fields: [gamificationBlockId], references: [id], onDelete: Cascade)
-  cards            FlashcardCard[]
+  cards             FlashcardCard[]
 
   @@index([companyId])
   @@index([createdByProfileId])
@@ -636,8 +657,8 @@ model FlashcardCard {
 
   deck FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
 
-  @@index([deckId])
   @@unique([deckId, position])
+  @@index([deckId])
 }
 
 model QuizQuestion {
@@ -652,9 +673,9 @@ model QuizQuestion {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  quiz     Quiz        @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  options  QuizOption[]
-  answers  QuizAnswer[]
+  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options QuizOption[]
+  answers QuizAnswer[]
 
   @@index([quizId])
 }
@@ -668,26 +689,26 @@ model QuizOption {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question QuizQuestion       @relation(fields: [questionId], references: [id], onDelete: Cascade)
   answers  QuizAnswerOption[]
 
   @@index([questionId])
 }
 
 model QuizAttempt {
-  id             String      @id @default(cuid())
-  quizId         String
-  userProfileId  String
-  attemptNumber  Int         @default(1)
-  submittedAt    DateTime?
-  score          Int         @default(0)
-  passed         Boolean     @default(false)
+  id              String    @id @default(cuid())
+  quizId          String
+  userProfileId   String
+  attemptNumber   Int       @default(1)
+  submittedAt     DateTime?
+  score           Int       @default(0)
+  passed          Boolean   @default(false)
   durationSeconds Int?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  quiz        Quiz        @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  userProfile UserProfile @relation("QuizAttemptUser", fields: [userProfileId], references: [id], onDelete: Cascade)
+  quiz        Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  userProfile UserProfile  @relation("QuizAttemptUser", fields: [userProfileId], references: [id], onDelete: Cascade)
   answers     QuizAnswer[]
 
   @@unique([quizId, userProfileId, attemptNumber])
@@ -696,17 +717,17 @@ model QuizAttempt {
 }
 
 model QuizAnswer {
-  id          String     @id @default(cuid())
-  attemptId   String
-  questionId  String
-  freeText    String?
-  isCorrect   Boolean?
-  scoreAwarded Int       @default(0)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id           String   @id @default(cuid())
+  attemptId    String
+  questionId   String
+  freeText     String?
+  isCorrect    Boolean?
+  scoreAwarded Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  attempt  QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attempt  QuizAttempt        @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question QuizQuestion       @relation(fields: [questionId], references: [id], onDelete: Cascade)
   options  QuizAnswerOption[]
 
   @@unique([attemptId, questionId])
@@ -742,25 +763,25 @@ model LessonBlockAttachment {
 }
 
 model CourseAchievement {
-  id                 String                   @id @default(cuid())
+  id                 String                @id @default(cuid())
   courseId           String
   title              String
   description        String?
   unlockType         AchievementUnlockType
   targetModuleId     String?
   targetLessonId     String?
-  pointsReward       Int                      @default(0)
+  pointsReward       Int                   @default(0)
   icon               String?
-  isActive           Boolean                  @default(true)
+  isActive           Boolean               @default(true)
   createdByProfileId String
-  createdAt          DateTime                 @default(now())
-  updatedAt          DateTime                 @updatedAt
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
 
-  course      Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  createdBy   UserProfile @relation("CourseAchievementCreatedBy", fields: [createdByProfileId], references: [id], onDelete: Cascade)
-  targetModule CourseModule? @relation(fields: [targetModuleId], references: [id])
-  targetLesson Lesson?    @relation(fields: [targetLessonId], references: [id])
-  awards      UserCourseAchievement[]
+  course       Course                  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdBy    UserProfile             @relation("CourseAchievementCreatedBy", fields: [createdByProfileId], references: [id], onDelete: Cascade)
+  targetModule CourseModule?           @relation(fields: [targetModuleId], references: [id])
+  targetLesson Lesson?                 @relation(fields: [targetLessonId], references: [id])
+  awards       UserCourseAchievement[]
 
   @@index([courseId])
   @@index([targetModuleId])
@@ -768,11 +789,11 @@ model CourseAchievement {
 }
 
 model UserCourseAchievement {
-  id              String    @id @default(cuid())
-  userProfileId   String
-  achievementId   String
-  pointsAwarded   Int       @default(0)
-  awardedAt       DateTime  @default(now())
+  id            String   @id @default(cuid())
+  userProfileId String
+  achievementId String
+  pointsAwarded Int      @default(0)
+  awardedAt     DateTime @default(now())
 
   userProfile UserProfile       @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
   achievement CourseAchievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)

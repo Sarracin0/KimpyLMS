@@ -66,9 +66,61 @@ export type GeneratedFlashcardPayload = {
   cards: GeneratedFlashcardCard[]
 }
 
+export type GeneratedScenarioImpact = {
+  score?: number
+  risk?: number
+  competencyTags?: string[]
+  summary?: string | null
+}
+
+export type GeneratedScenarioChoice = {
+  id: string
+  label: string
+  feedback: string
+  impact?: GeneratedScenarioImpact
+  nextNodeId?: string | null
+}
+
+export type GeneratedScenarioRubric = {
+  excellent?: string
+  satisfactory?: string
+  needsSupport?: string
+}
+
+export type GeneratedScenarioNode = {
+  id: string
+  type: 'decision' | 'reflection'
+  situation: string
+  headline?: string | null
+  narrative?: string | null
+  prompt?: string | null
+  guidance?: string | null
+  choices?: GeneratedScenarioChoice[]
+  rubric?: GeneratedScenarioRubric | null
+  maxScore?: number | null
+}
+
+export type GeneratedScenarioDebrief = {
+  summary: string
+  coachingPoints?: string[]
+  skillSignals?: string[]
+  riskAlerts?: string[]
+  followUpQuestions?: string[]
+}
+
+export type GeneratedScenarioPayload = {
+  intro: string
+  objectives: string[]
+  estimatedDurationMinutes?: number | null
+  contextNotes?: string | null
+  nodes: GeneratedScenarioNode[]
+  debrief: GeneratedScenarioDebrief
+}
+
 export type GamificationGenerationResult = {
   type: GamificationContentType
   raw?: unknown
   quiz?: GeneratedQuizPayload
   flashcards?: GeneratedFlashcardPayload
+  scenario?: GeneratedScenarioPayload
 }

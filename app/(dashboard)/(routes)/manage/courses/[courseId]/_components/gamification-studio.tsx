@@ -15,10 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import type { LessonBlock } from './module-accordion'
 import type { GamificationContentType, GamificationStatus } from '@prisma/client'
-import { Loader2, RefreshCw, Sparkles, FileText, ExternalLink, ListChecks } from 'lucide-react'
+import { Loader2, RefreshCw, Sparkles, FileText, ExternalLink, ListChecks, GitBranch } from 'lucide-react'
 import { logError } from '@/lib/logger'
-
-import type { GamificationContentType, GamificationStatus } from '@prisma/client'
+import { extractScenarioPayload, summarizeScenario } from '@/lib/gamification/scenario'
 
 type CourseDocument = {
   id: string
@@ -42,6 +41,9 @@ type GenerationSettings = {
   difficulty: 'beginner' | 'intermediate' | 'advanced' | 'mixed'
   cardCount: number
   tone: 'neutral' | 'motivational' | 'formal' | 'playful'
+  nodeCount: number
+  focusCompetency: string
+  riskProfile: 'prudente' | 'bilanciato' | 'audace'
   notes?: string
 }
 
@@ -57,21 +59,22 @@ const DEFAULT_SETTINGS: GenerationSettings = {
   difficulty: 'mixed',
   cardCount: 10,
   tone: 'neutral',
+  nodeCount: 5,
+  focusCompetency: '',
+  riskProfile: 'bilanciato',
   notes: '',
 }
 
 const STATUS_VALUES = ['DRAFT', 'GENERATING', 'READY', 'FAILED'] as const
-const CONTENT_VALUES = ['QUIZ', 'FLASHCARDS'] as const
+const CONTENT_VALUES = ['QUIZ', 'FLASHCARDS', 'SCENARIO'] as const
 
 const ensureString = (value: unknown) => (typeof value === 'string' ? value : '')
 const ensureNullableString = (value: unknown) => (typeof value === 'string' ? value : null)
-const ensureBoolean = (value: unknown, fallback = false) => (typeof value === 'boolean' ? value : fallback)
 const ensureNumber = (value: unknown, fallback = 0) => {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
 }
-
 const generateId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
@@ -92,6 +95,8 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
   const quizSummary = block.gamification?.quizSummary ?? block.quizSummary
   const quizManageHref = `/manage/courses/${courseId}/quizzes/${block.id}`
   const flashcardManageHref = flashcardDeck ? `/manage/courses/${courseId}/flashcards/${flashcardDeck.id}` : '#'
+  const scenarioSummary = block.gamification?.scenarioSummary ?? null
+  const scenarioPreviewHref = `/courses/${courseId}/scenarios/${block.id}`
 
   const loadDocuments = useCallback(async () => {
     try {
@@ -204,6 +209,11 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
           }
         : null
 
+      const scenarioPayload = extractScenarioPayload(gamificationRaw?.result ?? null)
+      const mappedScenarioSummary = scenarioPayload
+        ? summarizeScenario(scenarioPayload)
+        : null
+
       const statusValue = ensureString(gamificationRaw?.status)
       const contentTypeValue = ensureString(gamificationRaw?.contentType)
 
@@ -242,6 +252,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               config: normalizedConfig,
               flashcardDeck: mappedFlashcards,
               quizSummary: mappedQuizSummary ?? block.gamification?.quizSummary ?? null,
+              scenarioSummary: mappedScenarioSummary ?? block.gamification?.scenarioSummary ?? null,
             }
           : block.gamification ?? null,
         quizSummary: mappedQuizSummary ?? block.quizSummary ?? null,
@@ -283,6 +294,15 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
 
   const statusBadgeClass = STATUS_COLORS[status as GamificationStatus] ?? STATUS_COLORS.DRAFT
 
+  const contentLabel =
+    contentType === 'QUIZ'
+      ? 'Quiz'
+      : contentType === 'FLASHCARDS'
+        ? 'Flashcards'
+        : 'Decision Lab'
+  const ContentLabelIcon =
+    contentType === 'QUIZ' ? ListChecks : contentType === 'FLASHCARDS' ? FileText : GitBranch
+
   const canGenerate = !isGenerating && selectedDocs.length > 0
 
   const contextualSettings = useMemo(() => {
@@ -320,19 +340,67 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
         </div>
       )
     }
+    if (contentType === 'FLASHCARDS') {
+      return (
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor="card-count">Number of cards</Label>
+            <Input
+              id="card-count"
+              type="number"
+              min={4}
+              max={30}
+              value={settings.cardCount}
+              onChange={(event) => handleSettingChange('cardCount', Number(event.target.value) || DEFAULT_SETTINGS.cardCount)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Tone</Label>
+            <Select value={settings.tone} onValueChange={(value: GenerationSettings['tone']) => handleSettingChange('tone', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Neutral" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="neutral">Neutral</SelectItem>
+                <SelectItem value="motivational">Motivational</SelectItem>
+                <SelectItem value="formal">Formal</SelectItem>
+                <SelectItem value="playful">Playful</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )
+    }
 
     return (
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1">
-          <Label htmlFor="card-count">Number of cards</Label>
+          <Label htmlFor="node-count">Decision points</Label>
           <Input
-            id="card-count"
+            id="node-count"
             type="number"
-            min={4}
-            max={30}
-            value={settings.cardCount}
-            onChange={(event) => handleSettingChange('cardCount', Number(event.target.value) || DEFAULT_SETTINGS.cardCount)}
+            min={3}
+            max={8}
+            value={settings.nodeCount}
+            onChange={(event) => handleSettingChange('nodeCount', Number(event.target.value) || DEFAULT_SETTINGS.nodeCount)}
           />
+          <p className="text-[11px] text-muted-foreground">Recommended range: 4–6 decision nodes.</p>
+        </div>
+        <div className="space-y-1">
+          <Label>Risk profile</Label>
+          <Select
+            value={settings.riskProfile}
+            onValueChange={(value) => handleSettingChange('riskProfile', value as GenerationSettings['riskProfile'])}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Balanced" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="prudente">Prudente · privilegia la sicurezza</SelectItem>
+              <SelectItem value="bilanciato">Bilanciato · mix rischio/beneficio</SelectItem>
+              <SelectItem value="audace">Audace · scenario sfidante</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1">
           <Label>Tone</Label>
@@ -348,6 +416,15 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-1 md:col-span-2">
+          <Label htmlFor="focus-competency">Competency focus</Label>
+          <Input
+            id="focus-competency"
+            placeholder="E.g. gestione del cliente, leadership, compliance"
+            value={settings.focusCompetency}
+            onChange={(event) => handleSettingChange('focusCompetency', event.target.value)}
+          />
+        </div>
       </div>
     )
   }, [contentType, settings])
@@ -361,7 +438,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               {status.toLowerCase()}
             </Badge>
             <Badge variant="secondary" className="gap-1">
-              <Sparkles className="h-3 w-3" /> {contentType === 'QUIZ' ? 'Quiz' : 'Flashcards'}
+              <ContentLabelIcon className="h-3 w-3" /> {contentLabel}
             </Badge>
           </div>
           <Button variant="ghost" size="sm" onClick={() => void loadDocuments()} disabled={isLoadingDocs}>
@@ -372,7 +449,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
         <CardTitle className="text-base font-semibold tracking-tight">AI Gamification Studio</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-3">
           <Button
             type="button"
             variant={contentType === 'QUIZ' ? 'default' : 'outline'}
@@ -390,6 +467,15 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             disabled={isGenerating}
           >
             <FileText className="mr-2 h-4 w-4" /> Flashcards
+          </Button>
+          <Button
+            type="button"
+            variant={contentType === 'SCENARIO' ? 'default' : 'outline'}
+            className="justify-start"
+            onClick={() => setContentType('SCENARIO')}
+            disabled={isGenerating}
+          >
+            <GitBranch className="mr-2 h-4 w-4" /> Decision Lab
           </Button>
         </div>
 
@@ -530,6 +616,47 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               {flashcardDeck.cardCount > 3 && (
                 <p className="text-[11px] text-muted-foreground">+ {flashcardDeck.cardCount - 3} more cards</p>
               )}
+            </div>
+          </div>
+        )}
+
+        {status === 'READY' && contentType === 'SCENARIO' && scenarioSummary && (
+          <div className="rounded-lg border border-border/40 bg-background/70 p-3 text-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground line-clamp-2">{scenarioSummary.intro}</p>
+                <p className="text-xs text-muted-foreground">
+                  {scenarioSummary.nodeCount} decision nodes
+                  {typeof scenarioSummary.estimatedDurationMinutes === 'number'
+                    ? ` · ~${scenarioSummary.estimatedDurationMinutes} min`
+                    : ''}
+                </p>
+              </div>
+              <Button asChild size="sm" variant="outline">
+                <Link href={scenarioPreviewHref}>
+                  Preview learner view
+                  <ExternalLink className="ml-2 h-3 w-3" />
+                </Link>
+              </Button>
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold text-foreground">Objectives</p>
+              <div className="space-y-1">
+                {(scenarioSummary.objectives ?? []).slice(0, 3).map((objective, index) => (
+                  <p key={`${objective}-${index}`} className="text-[11px] text-muted-foreground">
+                    • {objective}
+                  </p>
+                ))}
+                {scenarioSummary.objectives && scenarioSummary.objectives.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground">Objectives provided by the AI will appear here.</p>
+                ) : null}
+              </div>
+              {scenarioSummary.objectives && scenarioSummary.objectives.length > 3 ? (
+                <p className="text-[11px] text-muted-foreground">
+                  + {scenarioSummary.objectives.length - 3} additional learning goals
+                </p>
+              ) : null}
             </div>
           </div>
         )}

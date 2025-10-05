@@ -290,6 +290,41 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
           result: resultJson as Prisma.JsonValue,
         },
       })
+    } else if (contentType === GamificationContentType.SCENARIO && generation.scenario) {
+      const scenarioPayload = generation.scenario
+      if (!scenarioPayload.nodes || scenarioPayload.nodes.length === 0) {
+        await db.gamificationBlock.update({
+          where: { id: gamification.id },
+          data: {
+            status: GamificationStatus.FAILED,
+            result: { error: 'The model did not return decision nodes for the scenario' } satisfies Prisma.JsonValue,
+          },
+        })
+
+        return new NextResponse('Invalid scenario payload', { status: 422 })
+      }
+
+      if (block.quiz) {
+        await db.quiz.delete({ where: { id: block.quiz.id } }).catch(() => undefined)
+      }
+
+      if (gamification.flashcardDeck) {
+        await db.flashcardDeck.delete({ where: { id: gamification.flashcardDeck.id } }).catch(() => undefined)
+      }
+
+      const scenarioResult: Prisma.JsonValue = {
+        scenario: scenarioPayload,
+        raw: generation.raw ?? null,
+      } as Prisma.JsonValue
+
+      await db.gamificationBlock.update({
+        where: { id: gamification.id },
+        data: {
+          status: GamificationStatus.READY,
+          quizId: null,
+          result: scenarioResult,
+        },
+      })
     } else {
       await db.gamificationBlock.update({
         where: { id: gamification.id },

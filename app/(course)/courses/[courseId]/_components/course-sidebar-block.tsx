@@ -1,18 +1,17 @@
 'use client'
 
-import { LockIcon, PlayCircleIcon, FileTextIcon, VideoIcon, Sparkles } from 'lucide-react'
+import { LockIcon, PlayCircleIcon, FileTextIcon, VideoIcon, GitBranch, ListChecks } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { BlockData } from './course-sidebar.types'
 
 type CourseSidebarBlockProps = {
   block: BlockData
-  lessonId: string
   courseId: string
   isLocked: boolean
 }
 
-export default function CourseSidebarBlock({ block, lessonId, courseId, isLocked }: CourseSidebarBlockProps) {
+export default function CourseSidebarBlock({ block, courseId, isLocked }: CourseSidebarBlockProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -32,7 +31,9 @@ export default function CourseSidebarBlock({ block, lessonId, courseId, isLocked
       case 'LIVE_SESSION':
         return PlayCircleIcon
       case 'GAMIFICATION':
-        return Sparkles
+        if (block.gamification?.contentType === 'FLASHCARDS') return FileTextIcon
+        if (block.gamification?.contentType === 'SCENARIO') return GitBranch
+        return ListChecks
       default:
         return FileTextIcon
     }
@@ -61,6 +62,11 @@ export default function CourseSidebarBlock({ block, lessonId, courseId, isLocked
             router.push(`/courses/${courseId}/flashcards/${deckId}`)
             return
           }
+        }
+
+        if (contentType === 'SCENARIO') {
+          router.push(`/courses/${courseId}/scenarios/${block.id}`)
+          return
         }
 
         // Fallback to quiz experience if the deck is not available or the content is a quiz

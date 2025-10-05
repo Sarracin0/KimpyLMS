@@ -92,6 +92,12 @@ export type LessonBlock = {
       questionCount: number
       pointsReward: number
     } | null
+    scenarioSummary: {
+      intro: string
+      objectives: string[]
+      nodeCount: number
+      estimatedDurationMinutes: number | null
+    } | null
   } | null
 }
 
