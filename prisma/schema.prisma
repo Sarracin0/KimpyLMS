@@ -95,6 +95,9 @@ enum AchievementUnlockType {
   FIRST_CHAPTER
   MODULE_COMPLETION
   COURSE_COMPLETION
+  LESSON_COMPLETION
+  QUIZ_SCORE
+  SCENARIO_PERFORMANCE
 }
 
 enum AttachmentScope {
@@ -773,6 +776,7 @@ model CourseAchievement {
   pointsReward       Int                   @default(0)
   icon               String?
   isActive           Boolean               @default(true)
+  criteria           Json?
   createdByProfileId String
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt

@@ -130,6 +130,7 @@ export type CourseAchievement = {
   pointsReward: number
   icon?: string | null
   isActive: boolean
+  criteria?: Record<string, unknown> | null
   createdAt: string
 }
 
@@ -219,6 +220,7 @@ const mapAchievementFromDb = (achievement: DbAchievementWithRelations): CourseAc
   pointsReward: achievement.pointsReward,
   icon: achievement.icon ?? null,
   isActive: achievement.isActive,
+  criteria: (achievement.criteria as Record<string, unknown> | null) ?? null,
   createdAt: new Date(achievement.createdAt).toISOString(),
 })
 

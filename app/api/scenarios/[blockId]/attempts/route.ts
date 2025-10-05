@@ -5,6 +5,7 @@ import { requireAuthContext, assertRole } from '@/lib/current-profile'
 import { db } from '@/lib/db'
 import { extractScenarioPayload } from '@/lib/gamification/scenario'
 import { logError } from '@/lib/logger'
+import { evaluateCourseAchievements } from '@/lib/evaluate-course-achievements'
 
 const MAX_POINTS_REWARD = 500
 
@@ -42,6 +43,15 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
       },
       include: {
         gamification: true,
+        lesson: {
+          select: {
+            module: {
+              select: {
+                courseId: true,
+              },
+            },
+          },
+        },
       },
     })
 
@@ -190,6 +200,14 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
           completedAt: new Date(),
           pointsAwarded,
         },
+      })
+    }
+
+    const courseIdForEval = block.lesson?.module?.courseId
+    if (courseIdForEval && profile.role === UserRole.LEARNER) {
+      await evaluateCourseAchievements({
+        courseId: courseIdForEval,
+        userProfileId: profile.id,
       })
     }
 

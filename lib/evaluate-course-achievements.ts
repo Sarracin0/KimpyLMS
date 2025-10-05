@@ -15,6 +15,71 @@ type AchievementEligibilityContext = {
   completedChapterIds: Set<string>
   moduleChapters: ModuleChaptersMap
   progressPercentage: number
+  completedLessonIds: Set<string>
+  quizAttempts: Map<string, { score: number; passed: boolean }>
+  scenarioAttempts: Map<string, { score: number; riskLevel: number | null }>
+}
+
+const asRecord = (value: unknown): Record<string, unknown> | null => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>
+  }
+  return null
+}
+
+const getString = (record: Record<string, unknown>, key: string): string | null => {
+  const value = record[key]
+  return typeof value === 'string' && value.trim().length > 0 ? value : null
+}
+
+const getNumber = (record: Record<string, unknown>, key: string): number | null => {
+  const value = record[key]
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  return null
+}
+
+const getBoolean = (record: Record<string, unknown>, key: string): boolean | null => {
+  const value = record[key]
+  return typeof value === 'boolean' ? value : null
+}
+
+const parseQuizCriteria = (criteria: unknown) => {
+  const record = asRecord(criteria)
+  if (!record) return null
+  const quizId = getString(record, 'quizId')
+  if (!quizId) return null
+  const requirePass = getBoolean(record, 'requirePass') ?? true
+  const minScore = getNumber(record, 'minScore')
+  return {
+    quizId,
+    requirePass,
+    minScore: typeof minScore === 'number' ? Math.max(0, Math.trunc(minScore)) : null,
+  }
+}
+
+const parseScenarioCriteria = (criteria: unknown) => {
+  const record = asRecord(criteria)
+  if (!record) return null
+  const gamificationBlockId = getString(record, 'gamificationBlockId')
+  if (!gamificationBlockId) return null
+  const minScore = getNumber(record, 'minScore')
+  const maxRisk = getNumber(record, 'maxRisk')
+  return {
+    gamificationBlockId,
+    minScore: typeof minScore === 'number' ? Math.max(0, Math.trunc(minScore)) : null,
+    maxRisk:
+      typeof maxRisk === 'number' ? Math.max(0, Math.min(100, Math.trunc(maxRisk))) : null,
+  }
+}
+
+const parseLessonCriteria = (criteria: unknown) => {
+  const record = asRecord(criteria)
+  if (!record) return null
+  const lessonId = getString(record, 'lessonId')
+  const deckId = getString(record, 'deckId')
+  return { lessonId, deckId }
 }
 
 const buildModuleChapterMap = async (moduleIds: string[]): Promise<ModuleChaptersMap> => {
@@ -57,13 +122,15 @@ const buildModuleChapterMap = async (moduleIds: string[]): Promise<ModuleChapter
 }
 
 const isAchievementEligible = (
-  unlockType: AchievementUnlockType,
-  context: AchievementEligibilityContext,
   achievement: {
+    unlockType: AchievementUnlockType
     targetModuleId?: string | null
+    targetLessonId?: string | null
+    criteria?: unknown
   },
+  context: AchievementEligibilityContext,
 ): boolean => {
-  switch (unlockType) {
+  switch (achievement.unlockType) {
     case AchievementUnlockType.FIRST_CHAPTER:
       return context.completedChapterIds.size > 0
     case AchievementUnlockType.MODULE_COMPLETION: {
@@ -79,6 +146,52 @@ const isAchievementEligible = (
     }
     case AchievementUnlockType.COURSE_COMPLETION:
       return context.progressPercentage >= 100
+    case AchievementUnlockType.LESSON_COMPLETION: {
+      const parsed = parseLessonCriteria(achievement.criteria)
+      const lessonId = achievement.targetLessonId ?? parsed?.lessonId
+      if (!lessonId) {
+        return false
+      }
+      return context.completedLessonIds.has(lessonId)
+    }
+    case AchievementUnlockType.QUIZ_SCORE: {
+      const parsed = parseQuizCriteria(achievement.criteria)
+      if (!parsed) {
+        return false
+      }
+      const attempt = context.quizAttempts.get(parsed.quizId)
+      if (!attempt) {
+        return false
+      }
+      if (parsed.requirePass && !attempt.passed) {
+        return false
+      }
+      if (parsed.minScore != null && attempt.score < parsed.minScore) {
+        return false
+      }
+      return true
+    }
+    case AchievementUnlockType.SCENARIO_PERFORMANCE: {
+      const parsed = parseScenarioCriteria(achievement.criteria)
+      if (!parsed) {
+        return false
+      }
+      const attempt = context.scenarioAttempts.get(parsed.gamificationBlockId)
+      if (!attempt) {
+        return false
+      }
+      if (parsed.minScore != null && attempt.score < parsed.minScore) {
+        return false
+      }
+      if (
+        parsed.maxRisk != null &&
+        typeof attempt.riskLevel === 'number' &&
+        attempt.riskLevel > parsed.maxRisk
+      ) {
+        return false
+      }
+      return true
+    }
     default:
       return false
   }
@@ -131,6 +244,86 @@ export const evaluateCourseAchievements = async ({
 
   const moduleChapters = await buildModuleChapterMap(Array.from(new Set(moduleIds)))
 
+  const requiresLessonProgress = achievements.some((achievement) =>
+    [AchievementUnlockType.LESSON_COMPLETION, AchievementUnlockType.SCENARIO_PERFORMANCE, AchievementUnlockType.QUIZ_SCORE].includes(
+      achievement.unlockType,
+    ),
+  )
+
+  const lessonProgress = requiresLessonProgress
+    ? await db.userLessonProgress.findMany({
+        where: {
+          userProfileId,
+          isCompleted: true,
+          lesson: {
+            module: {
+              courseId,
+            },
+          },
+        },
+        select: { lessonId: true },
+      })
+    : []
+
+  const completedLessonIds = new Set(lessonProgress.map((item) => item.lessonId))
+
+  const quizIds = achievements
+    .map((achievement) => parseQuizCriteria(achievement.criteria)?.quizId)
+    .filter((value): value is string => Boolean(value))
+
+  const uniqueQuizIds = Array.from(new Set(quizIds))
+
+  const quizAttempts = uniqueQuizIds.length
+    ? await db.quizAttempt.findMany({
+        where: {
+          userProfileId,
+          quizId: { in: uniqueQuizIds },
+          submittedAt: { not: null },
+        },
+        orderBy: [{ score: 'desc' }, { submittedAt: 'desc' }],
+      })
+    : []
+
+  const quizAttemptMap = quizAttempts.reduce<Map<string, { score: number; passed: boolean }>>(
+    (accumulator, attempt) => {
+      const existing = accumulator.get(attempt.quizId)
+      if (!existing || attempt.score > existing.score) {
+        accumulator.set(attempt.quizId, { score: attempt.score, passed: attempt.passed })
+      }
+      return accumulator
+    },
+    new Map(),
+  )
+
+  const scenarioIds = achievements
+    .map((achievement) => parseScenarioCriteria(achievement.criteria)?.gamificationBlockId)
+    .filter((value): value is string => Boolean(value))
+
+  const uniqueScenarioIds = Array.from(new Set(scenarioIds))
+
+  const scenarioAttempts = uniqueScenarioIds.length
+    ? await db.scenarioAttempt.findMany({
+        where: {
+          userProfileId,
+          gamificationBlockId: { in: uniqueScenarioIds },
+        },
+        orderBy: [{ score: 'desc' }, { createdAt: 'desc' }],
+      })
+    : []
+
+  const scenarioAttemptMap = scenarioAttempts.reduce<
+    Map<string, { score: number; riskLevel: number | null }>
+  >((accumulator, attempt) => {
+    const existing = accumulator.get(attempt.gamificationBlockId)
+    if (!existing || attempt.score > existing.score) {
+      accumulator.set(attempt.gamificationBlockId, {
+        score: attempt.score,
+        riskLevel: typeof attempt.riskLevel === 'number' ? attempt.riskLevel : null,
+      })
+    }
+    return accumulator
+  }, new Map())
+
   const computedProgress =
     typeof progressPercentage === 'number' ? progressPercentage : await getProgress(userProfileId, courseId)
 
@@ -138,6 +331,9 @@ export const evaluateCourseAchievements = async ({
     completedChapterIds,
     moduleChapters,
     progressPercentage: computedProgress,
+    completedLessonIds,
+    quizAttempts: quizAttemptMap,
+    scenarioAttempts: scenarioAttemptMap,
   }
 
   for (const achievement of achievements) {
@@ -145,7 +341,7 @@ export const evaluateCourseAchievements = async ({
       continue
     }
 
-    if (!isAchievementEligible(achievement.unlockType, context, achievement)) {
+    if (!isAchievementEligible(achievement, context)) {
       continue
     }
 

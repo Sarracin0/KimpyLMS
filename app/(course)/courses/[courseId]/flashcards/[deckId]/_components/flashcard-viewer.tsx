@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -17,11 +18,14 @@ type FlashcardViewerProps = {
     description: string | null
     cards: FlashcardViewerCard[]
   }
+  deckId: string
 }
 
-export function FlashcardViewer({ deck }: FlashcardViewerProps) {
+export function FlashcardViewer({ deck, deckId }: FlashcardViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [showBack, setShowBack] = useState(false)
+  const [isCompleting, setIsCompleting] = useState(false)
+  const [markedComplete, setMarkedComplete] = useState(false)
 
   const cards = deck.cards
   const currentCard = cards[activeIndex]
@@ -38,6 +42,23 @@ export function FlashcardViewer({ deck }: FlashcardViewerProps) {
   const handleNext = () => {
     setActiveIndex((index) => (index === cards.length - 1 ? 0 : index + 1))
     setShowBack(false)
+  }
+
+  const markDeckCompleted = async () => {
+    if (markedComplete || isCompleting) return
+    setIsCompleting(true)
+    try {
+      const response = await fetch(`/api/flashcards/${deckId}/complete`, { method: 'POST' })
+      if (!response.ok) {
+        throw new Error('Request failed')
+      }
+      setMarkedComplete(true)
+      toast.success('Deck completato! Achievements aggiornati.')
+    } catch (error) {
+      toast.error('Impossibile registrare il completamento del deck')
+    } finally {
+      setIsCompleting(false)
+    }
   }
 
   if (cards.length === 0) {
@@ -90,6 +111,18 @@ export function FlashcardViewer({ deck }: FlashcardViewerProps) {
           <Button variant="secondary" onClick={handleNext}>
             Successiva
           </Button>
+        </div>
+        <div className="w-full space-y-2">
+          <Button
+            className="w-full"
+            onClick={markDeckCompleted}
+            disabled={markedComplete || isCompleting}
+          >
+            {markedComplete ? 'Deck completato' : isCompleting ? 'Registrazione…' : 'Segna come completato'}
+          </Button>
+          <p className="text-center text-xs text-muted-foreground">
+            Premi quando hai ripassato tutte le carte per sbloccare gli achievement collegati.
+          </p>
         </div>
       </div>
     </div>
