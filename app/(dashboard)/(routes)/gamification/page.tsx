@@ -73,6 +73,43 @@ export default async function GamificationPage() {
     )
   }
 
+  const scenarioAttemptPromise = db.scenarioAttempt?.findMany
+    ? db.scenarioAttempt.findMany({
+        where: {
+          gamificationBlock: {
+            lessonBlock: {
+              lesson: {
+                module: {
+                  course: { companyId: company.id },
+                },
+              },
+            },
+          },
+        },
+        include: {
+          gamificationBlock: {
+            include: {
+              lessonBlock: {
+                include: {
+                  lesson: {
+                    include: {
+                      module: {
+                        include: {
+                          course: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 250,
+      })
+    : Promise.resolve([])
+
   const [badgeAwards, quizList, topProfiles, scenarioAttempts] = await Promise.all([
     db.userBadge.findMany({
       where: {
@@ -114,40 +151,7 @@ export default async function GamificationPage() {
       orderBy: { points: 'desc' },
       take: 10,
     }),
-    db.scenarioAttempt.findMany({
-      where: {
-        gamificationBlock: {
-          lessonBlock: {
-            lesson: {
-              module: {
-                course: { companyId: company.id },
-              },
-            },
-          },
-        },
-      },
-      include: {
-        gamificationBlock: {
-          include: {
-            lessonBlock: {
-              include: {
-                lesson: {
-                  include: {
-                    module: {
-                      include: {
-                        course: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 250,
-    }),
+    scenarioAttemptPromise,
   ])
 
   const badgeSummary = Array.from(

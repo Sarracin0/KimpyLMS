@@ -267,13 +267,20 @@ export function ScenarioLabPlayer({ blockId, scenario, latestAttempt }: Scenario
                 ) : null}
                 <div className="flex items-center gap-3">
                   <Button
+                    type="button"
                     size="sm"
                     onClick={handleConfirmChoice}
                     disabled={!pendingChoice}
                   >
                     Continue
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setPendingChoice(null)} disabled={!pendingChoice}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPendingChoice(null)}
+                    disabled={!pendingChoice}
+                  >
                     Clear
                   </Button>
                 </div>
@@ -288,6 +295,7 @@ export function ScenarioLabPlayer({ blockId, scenario, latestAttempt }: Scenario
                   rows={4}
                 />
                 <Button
+                  type="button"
                   size="sm"
                   onClick={handleConfirmReflection}
                   disabled={reflectionDraft.trim().length < 3}
@@ -363,11 +371,11 @@ export function ScenarioLabPlayer({ blockId, scenario, latestAttempt }: Scenario
               </div>
             ) : null}
             <div className="flex flex-wrap gap-2 pt-2">
-              <Button size="sm" onClick={handleSubmit} disabled={submitting}>
+              <Button type="button" size="sm" onClick={handleSubmit} disabled={submitting}>
                 {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Submit attempt
               </Button>
-              <Button size="sm" variant="ghost" onClick={resetLab} disabled={submitting}>
+              <Button type="button" size="sm" variant="ghost" onClick={resetLab} disabled={submitting}>
                 <RefreshCw className="mr-2 h-4 w-4" /> Restart
               </Button>
             </div>

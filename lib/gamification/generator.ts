@@ -145,8 +145,7 @@ const SCENARIO_TOOL = {
             guidance: { type: ['string', 'null'] },
             maxScore: { type: ['number', 'null'] },
             choices: {
-              type: 'array',
-              minItems: 0,
+              type: ['array', 'null'],
               items: {
                 type: 'object',
                 additionalProperties: false,
@@ -168,22 +167,25 @@ const SCENARIO_TOOL = {
                       },
                       summary: { type: ['string', 'null'] },
                     },
+                    required: ['score', 'risk', 'competencyTags', 'summary'],
                   },
                 },
-                required: ['id', 'label', 'feedback'],
+                required: ['id', 'label', 'feedback', 'nextNodeId', 'impact'],
               },
+              minItems: 0,
             },
             rubric: {
-              type: ['object', 'null'],
+              type: ['object', 'null'] ,
               additionalProperties: false,
               properties: {
                 excellent: { type: ['string', 'null'] },
                 satisfactory: { type: ['string', 'null'] },
                 needsSupport: { type: ['string', 'null'] },
               },
+              required: ['excellent', 'satisfactory', 'needsSupport'],
             },
           },
-          required: ['id', 'type', 'situation'],
+          required: ['id', 'type', 'situation', 'headline', 'narrative', 'prompt', 'guidance', 'maxScore', 'choices', 'rubric'],
         },
       },
       debrief: {
@@ -212,10 +214,10 @@ const SCENARIO_TOOL = {
             items: { type: 'string' },
           },
         },
-        required: ['summary'],
+        required: ['summary', 'coachingPoints', 'skillSignals', 'riskAlerts', 'followUpQuestions'],
       },
     },
-    required: ['intro', 'objectives', 'nodes', 'debrief'],
+    required: ['intro', 'objectives', 'estimatedDurationMinutes', 'contextNotes', 'nodes', 'debrief'],
   },
 }
 
