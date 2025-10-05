@@ -31,29 +31,30 @@ export default async function GamificationPage() {
           </p>
         </div>
 
-        <Card>
+        <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Points history</CardTitle>
             <p className="text-xs text-muted-foreground">Total points: {profile.points}</p>
           </CardHeader>
           <CardContent className="space-y-2">
             {pointsLog.map((entry) => (
-              <div key={entry.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-sm">
                 <span>{entry.reason ?? entry.type}</span>
-                <span className="text-xs font-medium text-foreground">+{entry.delta}</span>
+                <span className="text-xs font-semibold text-[#5D62E1]">+{entry.delta}</span>
               </div>
             ))}
             {pointsLog.length === 0 ? <p className="text-sm text-muted-foreground">No points awarded yet.</p> : null}
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Badges earned</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {badges.map((userBadge) => (
-              <div key={userBadge.id} className="rounded-md border px-4 py-3">
+              <div key={userBadge.id} className="relative rounded-lg border border-border/50 bg-card/70 px-4 py-3">
+                <div className="pointer-events-none absolute left-0 top-0 h-full w-[3px] rounded-l-md bg-[#5D62E1]/80" />
                 <p className="text-sm font-semibold text-foreground">{userBadge.badge.name}</p>
                 <p className="text-xs text-muted-foreground">{userBadge.badge.description}</p>
                 <p className="mt-2 text-xs text-muted-foreground">
@@ -186,7 +187,7 @@ export default async function GamificationPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {badgeSummary.map(({ badge, count, lastAwardedAt }) => (
-          <Card key={badge.id}>
+          <Card key={badge.id} className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">{badge.name}</CardTitle>
               <p className="text-xs text-muted-foreground">{badge.description}</p>
@@ -203,7 +204,7 @@ export default async function GamificationPage() {
           </Card>
         ))}
         {badgeSummary.length === 0 ? (
-          <Card className="md:col-span-2 xl:col-span-3">
+          <Card className="md:col-span-2 xl:col-span-3 rounded-xl border border-border/60 bg-card/80 shadow-sm">
             <CardContent className="p-6 text-sm text-muted-foreground">
               Nessun badge assegnato finora.
             </CardContent>
@@ -212,7 +213,7 @@ export default async function GamificationPage() {
       </section>
 
       <section className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 rounded-xl border border-border/60 bg-card/80 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Punteggi quiz per corso</CardTitle>
             <p className="text-xs text-muted-foreground">Aggregato di tutti i quiz pubblicati per corso.</p>
@@ -246,14 +247,14 @@ export default async function GamificationPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Top performer per punti</CardTitle>
             <p className="text-xs text-muted-foreground">Aggiornato in tempo reale dal registro punti.</p>
           </CardHeader>
           <CardContent className="space-y-3">
             {topProfiles.map((user) => (
-              <div key={user.id} className="rounded-md border border-border/40 bg-card/70 px-3 py-2 text-sm">
+              <div key={user.id} className="rounded-lg border border-border/40 bg-card/70 px-3 py-2 text-sm">
                 <p className="font-medium text-foreground">{user.userId}</p>
                 <p className="text-xs text-muted-foreground">
                   {user.jobTitle ?? '—'} · {user.department ?? '—'}
@@ -269,7 +270,7 @@ export default async function GamificationPage() {
       </section>
 
       <section>
-        <Card>
+        <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Ultimi badge assegnati</CardTitle>
             <p className="text-xs text-muted-foreground">Gli ultimi 25 rilasci del tuo team.</p>
@@ -279,7 +280,7 @@ export default async function GamificationPage() {
               <p className="text-sm text-muted-foreground">Ancora nessun badge assegnato nel tuo team.</p>
             ) : (
               badgeAwards.map((award) => (
-                <div key={award.id} className="flex flex-col gap-1 rounded-md border border-border/40 bg-card/70 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <div key={award.id} className="flex flex-col gap-1 rounded-lg border border-border/40 bg-card/70 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium text-foreground">{award.userProfile.userId}</p>
                     <p className="text-xs text-muted-foreground">{award.badge.name}</p>
