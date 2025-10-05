@@ -449,6 +449,30 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
         <CardTitle className="text-base font-semibold tracking-tight">AI Gamification Studio</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {contentType === 'SCENARIO' ? (
+          <div className="rounded-lg border border-[#5D62E1]/30 bg-[#5D62E1]/5 p-4 text-xs leading-relaxed text-slate-600">
+            <p className="mb-2 text-sm font-semibold text-[#3437a3]">Decision Lab – cosa succede per l&apos;HR</p>
+            <ul className="list-disc space-y-1 pl-4">
+              <li>
+                L&apos;AI crea una situazione ramificata di 4-6 punti decisionali con feedback immediato e punteggi su giudizio,
+                rischio e competenze emerse.
+              </li>
+              <li>
+                Ogni scelta alimenta analytics: punteggio medio, rischio aggregato, focus di competenza e riflessioni testuali
+                vengono salvati in <code>ScenarioAttempt</code> e mostrati nella dashboard Gamification.
+              </li>
+              <li>
+                Il learner vede un debrief finale con coaching points prima di inviare il percorso; il submit sblocca i punti solo
+                al primo completamento per evitare farming.
+              </li>
+              <li>
+                Puoi calibrare l&apos;esperienza regolando i controlli qui sotto (numero di nodi, profilo di rischio, competenza focus)
+                e aggiungendo note HR per contestualizzare policy e tono.
+              </li>
+            </ul>
+          </div>
+        ) : null}
+
         <div className="grid gap-3 md:grid-cols-3">
           <Button
             type="button"
