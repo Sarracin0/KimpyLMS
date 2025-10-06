@@ -1,12 +1,21 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import axios from 'axios'
-import { Loader2, Lock } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { Loader2, Lock, MessageCircle, Sparkles } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import { useConfettiStore } from '@/hooks/use-confetti'
+import type { VideoCheckpoint } from '@/types/video'
+
+type ProgressState = {
+  playedSeconds: number
+}
+
+const ReactPlayer = dynamic(() => import('react-player'), { ssr: false })
 
 interface VideoPlayerProps {
   courseId: string
@@ -16,53 +25,23 @@ interface VideoPlayerProps {
   completeOnEnd: boolean
   title: string
   videoUrl?: string | null
+  checkpoints?: VideoCheckpoint[] | null
 }
 
-type Provider = 'youtube' | 'vimeo' | 'hls' | 'file' | 'unknown'
+const buildCheckpointUrl = (courseId: string, checkpoint: VideoCheckpoint): string | null => {
+  if (!courseId || !checkpoint.action) return null
 
-function detectProvider(url: string): Provider {
-  const u = url.trim()
-  if (!u) return 'unknown'
-  // YouTube patterns
-  if (/youtu\.be\//i.test(u) || /youtube\.com\/(watch\?v=|embed\/)\/?.*/i.test(u)) {
-    return 'youtube'
-  }
-  // Vimeo patterns
-  if (/vimeo\.com\//i.test(u) || /player\.vimeo\.com\/video\//i.test(u)) {
-    return 'vimeo'
-  }
-  // HLS manifest
-  if (/\.m3u8(\?|$)/i.test(u)) {
-    return 'hls'
-  }
-  // Common file extensions
-  if (/\.(mp4|webm|ogg)(\?|$)/i.test(u)) {
-    return 'file'
-  }
-  return 'unknown'
-}
-
-function toYouTubeEmbed(url: string): string | null {
-  try {
-    const ytShort = url.match(/youtu\.be\/([\w-]{6,})/i)
-    if (ytShort) return `https://www.youtube.com/embed/${ytShort[1]}?rel=0&modestbranding=1&playsinline=1`
-    const ytWatch = url.match(/[?&]v=([\w-]{6,})/i)
-    if (ytWatch) return `https://www.youtube.com/embed/${ytWatch[1]}?rel=0&modestbranding=1&playsinline=1`
-    const ytEmbed = url.match(/youtube\.com\/embed\/([\w-]{6,})/i)
-    if (ytEmbed) return `https://www.youtube.com/embed/${ytEmbed[1]}?rel=0&modestbranding=1&playsinline=1`
-    return null
-  } catch {
-    return null
-  }
-}
-
-function toVimeoEmbed(url: string): string | null {
-  try {
-    const id = url.match(/vimeo\.com\/(?:video\/)?(\d+)/i)?.[1]
-    if (id) return `https://player.vimeo.com/video/${id}?title=0&byline=0&portrait=0`
-    return null
-  } catch {
-    return null
+  switch (checkpoint.action.type) {
+    case 'QUIZ':
+      return `/courses/${courseId}/quizzes/${checkpoint.action.blockId}`
+    case 'SCENARIO':
+      return `/courses/${courseId}/scenarios/${checkpoint.action.blockId}`
+    case 'FLASHCARDS':
+      return `/courses/${courseId}/flashcards/${checkpoint.action.deckId}`
+    case 'MESSAGE':
+      return checkpoint.action.ctaUrl ?? null
+    default:
+      return null
   }
 }
 
@@ -74,165 +53,204 @@ export const VideoPlayer = ({
   completeOnEnd,
   title,
   videoUrl,
+  checkpoints = [],
 }: VideoPlayerProps) => {
-  const [isReady, setIsReady] = useState(false)
   const router = useRouter()
   const confetti = useConfettiStore()
 
-  const provider = useMemo<Provider>(() => (videoUrl ? detectProvider(videoUrl) : 'unknown'), [videoUrl])
-  const videoEl = useRef<HTMLVideoElement | null>(null)
-  const hlsRef = useRef<unknown>(null)
+  const [isReady, setIsReady] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(!isLocked)
+  const [activeCheckpointId, setActiveCheckpointId] = useState<string | null>(null)
+  const [seenCheckpointIds, setSeenCheckpointIds] = useState<Set<string>>(() => new Set())
+
+  useEffect(() => {
+    setIsPlaying(!isLocked)
+  }, [isLocked])
+
+  useEffect(() => {
+    setIsReady(false)
+    setActiveCheckpointId(null)
+    setSeenCheckpointIds(new Set())
+  }, [videoUrl])
+
+  useEffect(() => {
+    setActiveCheckpointId(null)
+    setSeenCheckpointIds(new Set())
+  }, [checkpoints])
+
+  const orderedCheckpoints = useMemo(
+    () => [...checkpoints].sort((a, b) => a.timeInSeconds - b.timeInSeconds),
+    [checkpoints],
+  )
+
+  const activeCheckpoint = useMemo(
+    () => orderedCheckpoints.find((checkpoint) => checkpoint.id === activeCheckpointId) ?? null,
+    [orderedCheckpoints, activeCheckpointId],
+  )
 
   const onEnd = useCallback(async () => {
     try {
-      if (completeOnEnd) {
-        await axios.put(`/api/courses/${courseId}/chapters/${chapterId}/progress`, {
-          isCompleted: true,
-        })
+      if (!completeOnEnd) return
 
-        if (!nextChapterId) {
-          confetti.onOpen()
-        }
+      await axios.put(`/api/courses/${courseId}/chapters/${chapterId}/progress`, {
+        isCompleted: true,
+      })
 
-        toast.success('Progress updated')
-        router.refresh()
+      if (!nextChapterId) {
+        confetti.onOpen()
+      }
 
-        if (nextChapterId) {
-          router.push(`/courses/${courseId}/chapters/${nextChapterId}`)
-        }
+      toast.success('Progress updated')
+      router.refresh()
+
+      if (nextChapterId) {
+        router.push(`/courses/${courseId}/chapters/${nextChapterId}`)
       }
     } catch {
       toast.error('Something went wrong')
     }
   }, [chapterId, completeOnEnd, confetti, courseId, nextChapterId, router])
 
-  useEffect(() => {
-    // Setup HLS if needed
-    if (!videoUrl) return
-    if (provider !== 'hls') return
-    const el = videoEl.current
-    let cancelled = false
+  const handleProgress = useCallback(
+    (state: ProgressState) => {
+      if (isLocked || !videoUrl) return
+      if (activeCheckpoint) return
 
-    async function setupHls() {
-      try {
-        const mod = await import('hls.js')
-        const Hls = mod.default
-        if (Hls?.isSupported && Hls.isSupported()) {
-          const hls = new Hls()
-          hlsRef.current = hls
-          hls.loadSource(videoUrl)
-          if (el) {
-            hls.attachMedia(el)
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-              if (!cancelled) setIsReady(true)
-            })
-          }
-        } else if (el && el.canPlayType('application/vnd.apple.mpegurl')) {
-          el.src = videoUrl
-          const onLoaded = () => setIsReady(true)
-          el.addEventListener('loadedmetadata', onLoaded, { once: true })
-        } else {
-          // Fallback: show as regular video (may not play on this browser)
-          if (el) el.src = videoUrl
-          setIsReady(true)
-        }
-      } catch {
-        // hls.js not available or failed – fallback
-        if (el) el.src = videoUrl
-        setIsReady(true)
-      }
-    }
-
-    setupHls()
-
-    return () => {
-      cancelled = true
-      if (hlsRef.current) {
-        try {
-          hlsRef.current.destroy()
-        } catch {}
-        hlsRef.current = null
-      }
-    }
-  }, [provider, videoUrl])
-
-  const renderPlayer = () => {
-    if (!videoUrl || isLocked) return null
-
-    if (provider === 'youtube') {
-      const src = toYouTubeEmbed(videoUrl)
-      return src ? (
-        <iframe
-          title={title}
-          className="h-full w-full rounded-xl shadow-lg ring-1 ring-white/20"
-          src={src}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          onLoad={() => setIsReady(true)}
-        />
-      ) : null
-    }
-
-    if (provider === 'vimeo') {
-      const src = toVimeoEmbed(videoUrl)
-      return src ? (
-        <iframe
-          title={title}
-          className="h-full w-full rounded-xl shadow-lg ring-1 ring-white/20"
-          src={src}
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
-          onLoad={() => setIsReady(true)}
-        />
-      ) : null
-    }
-
-    if (provider === 'hls') {
-      return (
-        <video
-          ref={videoEl}
-          title={title}
-          className="h-full w-full rounded-xl shadow-lg ring-1 ring-white/20"
-          controls
-          playsInline
-          autoPlay
-          onEnded={onEnd}
-        />
+      const nextCheckpoint = orderedCheckpoints.find(
+        (checkpoint) => !seenCheckpointIds.has(checkpoint.id) && state.playedSeconds >= checkpoint.timeInSeconds,
       )
-    }
 
-    // file or unknown – let the browser try
-    return (
-      <video
-        title={title}
-        className="h-full w-full rounded-xl shadow-lg ring-1 ring-white/20"
-        controls
-        playsInline
-        autoPlay
-        onLoadedData={() => setIsReady(true)}
-        onEnded={onEnd}
-        src={videoUrl}
-      />
-    )
+      if (nextCheckpoint) {
+        setActiveCheckpointId(nextCheckpoint.id)
+        setIsPlaying(false)
+      }
+    },
+    [activeCheckpoint, orderedCheckpoints, seenCheckpointIds, isLocked, videoUrl],
+  )
+
+  const markCheckpointAsSeen = useCallback((checkpointId: string | null) => {
+    if (!checkpointId) return
+    setSeenCheckpointIds((previous) => {
+      const next = new Set(previous)
+      next.add(checkpointId)
+      return next
+    })
+  }, [])
+
+  const handleResume = () => {
+    markCheckpointAsSeen(activeCheckpointId)
+    setActiveCheckpointId(null)
+    setIsPlaying(true)
   }
+
+  const handleOpenLink = (href: string | null) => {
+    if (!href) return
+    try {
+      window.open(href, '_blank', 'noopener,noreferrer')
+    } catch {
+      // Ignore window open errors (popup blockers)
+    }
+  }
+
+  const playerShouldPlay = !isLocked && isPlaying && !activeCheckpoint
+  const actionUrl = activeCheckpoint ? buildCheckpointUrl(courseId, activeCheckpoint) : null
+  const actionType = activeCheckpoint?.action?.type ?? 'MESSAGE'
+  const actionLabel =
+    activeCheckpoint?.action?.type === 'MESSAGE'
+      ? activeCheckpoint.action.ctaLabel?.trim() || 'Continua'
+      : activeCheckpoint?.action?.type === 'QUIZ'
+        ? 'Apri quiz'
+        : activeCheckpoint?.action?.type === 'SCENARIO'
+          ? 'Apri Decision Lab'
+          : activeCheckpoint?.action?.type === 'FLASHCARDS'
+            ? 'Apri flashcard'
+            : 'Continua'
 
   return (
     <div className="relative aspect-video">
-      {!isReady && !isLocked && (
+      {!isReady && !isLocked ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/80">
           <Loader2 className="h-8 w-8 animate-spin text-white" />
         </div>
-      )}
-      {isLocked && (
+      ) : null}
+
+      {isLocked ? (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-y-2 rounded-xl bg-black/80 text-white">
           <Lock className="h-8 w-8" />
           <p className="text-sm">This chapter is locked</p>
         </div>
-      )}
-      {renderPlayer()}
-      {!isLocked && !videoUrl ? (
+      ) : null}
+
+      {!videoUrl && !isLocked ? (
         <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-white/30 bg-white/40 text-sm text-muted-foreground backdrop-blur-md supports-[backdrop-filter]:bg-white/30">
           Lesson video will appear here once uploaded.
+        </div>
+      ) : null}
+
+      {videoUrl && !isLocked ? (
+        <ReactPlayer
+          url={videoUrl}
+          width="100%"
+          height="100%"
+          controls
+          playing={playerShouldPlay}
+          onReady={() => setIsReady(true)}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onEnded={onEnd}
+          onProgress={handleProgress}
+          progressInterval={750}
+          config={{ file: { attributes: { controlsList: 'nodownload', playsInline: true, title } } }}
+          style={{ borderRadius: '0.75rem', overflow: 'hidden' }}
+        />
+      ) : null}
+
+      {activeCheckpoint ? (
+        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-black/80 p-6 text-white">
+          <div className="max-w-lg space-y-5 text-center">
+            <div className="flex justify-center">
+              {actionType === 'MESSAGE' ? (
+                <MessageCircle className="h-8 w-8 text-white/80" />
+              ) : (
+                <Sparkles className="h-8 w-8 text-white/80" />
+              )}
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">{activeCheckpoint.title}</h3>
+              {activeCheckpoint.description ? (
+                <p className="text-sm text-white/80">{activeCheckpoint.description}</p>
+              ) : null}
+            </div>
+            <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+              {actionUrl && actionType !== 'MESSAGE' ? (
+                <Button onClick={() => handleOpenLink(actionUrl)} className="w-full sm:w-auto">
+                  {actionLabel}
+                </Button>
+              ) : null}
+              {actionType === 'MESSAGE' ? (
+                <Button
+                  onClick={() => {
+                    if (actionUrl) {
+                      handleOpenLink(actionUrl)
+                    }
+                    handleResume()
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  {actionLabel}
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={handleResume} className="w-full sm:w-auto">
+                  Riprendi video
+                </Button>
+              )}
+            </div>
+            {actionType !== 'MESSAGE' ? (
+              <p className="text-xs text-white/60">
+                Il contenuto si apre in una nuova scheda. Torna qui quando hai terminato per continuare il video.
+              </p>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>

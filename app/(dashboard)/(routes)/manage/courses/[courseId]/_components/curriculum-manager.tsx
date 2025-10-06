@@ -28,6 +28,7 @@ import {
   type VirtualClassroomConfig,
 } from './module-accordion'
 import { extractScenarioPayload, summarizeScenario } from '@/lib/gamification/scenario'
+import { parseVideoCheckpoints } from '@/lib/video/checkpoints'
 
 type QuizPayload = DbQuiz & { questions: (DbQuizQuestion & { options: DbQuizOption[] })[] }
 type GamificationPayload = DbGamificationBlock & {
@@ -100,6 +101,7 @@ const mapBlockFromDb = (block: BlockPayload): LessonBlock => {
     liveSessionConfig: (block.liveSessionConfig as VirtualClassroomConfig | null) ?? null,
     attachments: block.attachments?.map(mapAttachmentFromDb) ?? [],
     quizSummary: mapQuizSummary(block.quiz ?? block.gamification?.quiz ?? null),
+    videoCheckpoints: parseVideoCheckpoints(block.videoCheckpoints ?? null),
     gamification: block.gamification
       ? {
           id: block.gamification.id,

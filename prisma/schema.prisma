@@ -542,6 +542,7 @@ model LessonBlock {
   isPublished Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  videoCheckpoints Json?
 
   lesson            Lesson                  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   attachments       LessonBlockAttachment[]

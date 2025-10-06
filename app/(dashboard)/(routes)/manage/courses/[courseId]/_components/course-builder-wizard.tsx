@@ -27,6 +27,7 @@ import CourseBasicsForm from './course-basics-form'
 import { CurriculumManager, mapModuleFromDb, type ModulePayload } from './curriculum-manager'
 import { CourseAchievementsPanel } from './course-achievements-panel'
 import { Badge } from '@/components/ui/badge'
+import type { VideoCheckpoint } from '@/types/video'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -84,6 +85,7 @@ export type LessonBlock = {
     questionCount: number
     pointsReward: number
   } | null
+  videoCheckpoints?: VideoCheckpoint[] | null
   gamification?: {
     id: string
     status: import('@prisma/client').GamificationStatus

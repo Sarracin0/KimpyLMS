@@ -149,6 +149,7 @@ export default async function ChapterDetails({ params }: ChapterDetailsProps) {
               isLocked={isLocked}
               completeOnEnd={completedOnEnd}
               videoUrl={chapter.videoUrl ?? undefined}
+              checkpoints={block?.videoCheckpoints ?? []}
             />
           )}
         </div>

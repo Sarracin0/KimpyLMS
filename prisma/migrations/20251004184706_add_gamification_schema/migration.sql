@@ -1,14 +1,39 @@
 -- CreateEnum
-CREATE TYPE "AttachmentScope" AS ENUM ('COURSE', 'LESSON');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE lower(typname) = 'attachmentscope') THEN
+    CREATE TYPE "AttachmentScope" AS ENUM ('COURSE', 'LESSON');
+  END IF;
+END$$;
 
 -- CreateEnum
-CREATE TYPE "GamificationContentType" AS ENUM ('QUIZ', 'FLASHCARDS');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE lower(typname) = 'gamificationcontenttype') THEN
+    CREATE TYPE "GamificationContentType" AS ENUM ('QUIZ', 'FLASHCARDS');
+  END IF;
+END$$;
 
 -- CreateEnum
-CREATE TYPE "GamificationStatus" AS ENUM ('DRAFT', 'GENERATING', 'READY', 'FAILED');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE lower(typname) = 'gamificationstatus') THEN
+    CREATE TYPE "GamificationStatus" AS ENUM ('DRAFT', 'GENERATING', 'READY', 'FAILED');
+  END IF;
+END$$;
 
 -- AlterEnum
-ALTER TYPE "BlockType" ADD VALUE 'GAMIFICATION';
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_enum e
+    JOIN pg_type t ON e.enumtypid = t.oid
+    WHERE lower(t.typname) = 'blocktype' AND e.enumlabel = 'GAMIFICATION'
+  ) THEN
+    ALTER TYPE "BlockType" ADD VALUE 'GAMIFICATION';
+  END IF;
+END$$;
 
 -- AlterTable
 ALTER TABLE "Attachment" ADD COLUMN     "scope" "AttachmentScope" NOT NULL DEFAULT 'LESSON';

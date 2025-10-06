@@ -27,6 +27,8 @@ import { VideoInput } from './video-input'
 import { UploadDropzone } from '@/lib/uploadthing'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GamificationStudio } from './gamification-studio'
+import { VideoCheckpointsEditor } from './video-checkpoints-editor'
+import type { VideoCheckpoint } from '@/types/video'
 
 export type VirtualClassroomConfig = {
   provider?: string
@@ -72,6 +74,7 @@ export type LessonBlock = {
     questionCount: number
     pointsReward: number
   } | null
+  videoCheckpoints?: VideoCheckpoint[] | null
   gamification?: {
     id: string
     status: import('@prisma/client').GamificationStatus
@@ -799,6 +802,15 @@ const LessonItem = (props: LessonItemProps) => {
                         {block.content || 'Click to add description...'}
                       </p>
                     )}
+                    {courseId ? (
+                      <VideoCheckpointsEditor
+                        courseId={courseId}
+                        moduleId={moduleId}
+                        lesson={lesson}
+                        block={block}
+                        onReplaceBlock={onReplaceBlock}
+                      />
+                    ) : null}
                   </div>
                 ) : block.type === 'RESOURCES' ? (
                   <div className="space-y-3">
@@ -970,7 +982,6 @@ const LessonItem = (props: LessonItemProps) => {
                 ) : (
                   <div className="space-y-2">
                     <div className="rounded-md border border-border/40 bg-background/70 p-3 text-xs space-y-1">
-                      <p className="text-xs font-semibold"></p>
                       <p className="text-xs text-muted-foreground">
                         Meeting ID: {block.liveSessionConfig?.meetingId ?? 'Da generare'}
                       </p>
