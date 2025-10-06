@@ -425,17 +425,17 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
                         <MessageCircle className="h-3.5 w-3.5" /> Messaggio informativo
                       </div>
                     </SelectItem>
-                    <SelectItem value="QUIZ" disabled={quizList.length === 0}>
+                    <SelectItem value="QUIZ">
                       <div className="flex items-center gap-2">
                         <ListChecks className="h-3.5 w-3.5" /> Quiz esistente
                       </div>
                     </SelectItem>
-                    <SelectItem value="SCENARIO" disabled={scenarioList.length === 0}>
+                    <SelectItem value="SCENARIO">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-3.5 w-3.5" /> Decision Lab
                       </div>
                     </SelectItem>
-                    <SelectItem value="FLASHCARDS" disabled={flashcardList.length === 0}>
+                    <SelectItem value="FLASHCARDS">
                       <div className="flex items-center gap-2">
                         <Layers className="h-3.5 w-3.5" /> Flashcard deck
                       </div>
@@ -473,7 +473,7 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
                   <Label>Quiz collegato</Label>
                   {quizList.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      Crea un blocco Quiz nella lezione per collegarlo al video.
+                      Nessun quiz pubblicato nella lezione. Aggiungi un blocco Quiz nel curriculum per sbloccare questa opzione.
                     </p>
                   ) : (
                     <Select
@@ -500,7 +500,7 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
                   <Label>Decision Lab</Label>
                   {scenarioList.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      Genera una gamification di tipo Decision Lab per collegarla qui.
+                      Nessun Decision Lab disponibile. Generane uno dal blocco Gamification per collegarlo al video.
                     </p>
                   ) : (
                     <Select
@@ -527,7 +527,7 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
                   <Label>Deck di flashcard</Label>
                   {flashcardList.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      Crea un deck di flashcard nella gamification per attivarlo nel video.
+                      Nessun deck di flashcard pronto. Genera un deck dal blocco Gamification per attivare questa interruzione.
                     </p>
                   ) : (
                     <Select

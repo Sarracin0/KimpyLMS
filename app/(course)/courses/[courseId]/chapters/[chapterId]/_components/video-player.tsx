@@ -5,9 +5,10 @@ import axios from 'axios'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { Loader2, Lock, MessageCircle, Sparkles } from 'lucide-react'
+import { Loader2, Lock, MessageCircle, NotebookPen, Sparkles, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { useConfettiStore } from '@/hooks/use-confetti'
 import type { VideoCheckpoint } from '@/types/video'
 
@@ -62,6 +63,9 @@ export const VideoPlayer = ({
   const [isPlaying, setIsPlaying] = useState(!isLocked)
   const [activeCheckpointId, setActiveCheckpointId] = useState<string | null>(null)
   const [seenCheckpointIds, setSeenCheckpointIds] = useState<Set<string>>(() => new Set())
+  const notesStorageKey = useMemo(() => `chapter-notes:${chapterId}`, [chapterId])
+  const [notesDraft, setNotesDraft] = useState('')
+  const [isNotesOpen, setIsNotesOpen] = useState(false)
 
   useEffect(() => {
     setIsPlaying(!isLocked)
@@ -71,12 +75,28 @@ export const VideoPlayer = ({
     setIsReady(false)
     setActiveCheckpointId(null)
     setSeenCheckpointIds(new Set())
+    setIsNotesOpen(false)
   }, [videoUrl])
 
   useEffect(() => {
     setActiveCheckpointId(null)
     setSeenCheckpointIds(new Set())
   }, [checkpoints])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = window.localStorage.getItem(notesStorageKey)
+    if (stored) {
+      setNotesDraft(stored)
+    } else {
+      setNotesDraft('')
+    }
+  }, [notesStorageKey])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(notesStorageKey, notesDraft)
+  }, [notesDraft, notesStorageKey])
 
   const orderedCheckpoints = useMemo(
     () => [...checkpoints].sort((a, b) => a.timeInSeconds - b.timeInSeconds),
@@ -195,8 +215,13 @@ export const VideoPlayer = ({
           controls
           playing={playerShouldPlay}
           onReady={() => setIsReady(true)}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onPlay={() => {
+            setIsPlaying(true)
+          }}
+          onPause={() => {
+            setIsPlaying(false)
+            setIsNotesOpen(true)
+          }}
           onEnded={onEnd}
           onProgress={handleProgress}
           progressInterval={750}
@@ -205,7 +230,7 @@ export const VideoPlayer = ({
         />
       ) : null}
 
-      {activeCheckpoint ? (
+     {activeCheckpoint ? (
         <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-black/80 p-6 text-white">
           <div className="max-w-lg space-y-5 text-center">
             <div className="flex justify-center">
@@ -251,6 +276,37 @@ export const VideoPlayer = ({
               </p>
             ) : null}
           </div>
+        </div>
+      ) : null}
+
+      {!activeCheckpoint && !isLocked ? (
+        <div className="absolute inset-y-0 right-0 z-10 flex flex-col items-end justify-start p-4">
+          <Button
+            size="icon"
+            variant={isNotesOpen ? 'secondary' : 'outline'}
+            className="mb-2 h-9 w-9 rounded-full bg-white/80 text-slate-900 shadow"
+            onClick={() => setIsNotesOpen((prev) => !prev)}
+          >
+            {isNotesOpen ? <X className="h-4 w-4" /> : <NotebookPen className="h-4 w-4" />}
+          </Button>
+          {isNotesOpen ? (
+            <div className="w-60 max-w-full rounded-xl bg-white/95 p-3 text-slate-900 shadow-lg">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <NotebookPen className="h-4 w-4" />
+                  Blocco note
+                </div>
+                <span className="text-[10px] uppercase text-muted-foreground">solo per te</span>
+              </div>
+              <Textarea
+                value={notesDraft}
+                onChange={(event) => setNotesDraft(event.target.value)}
+                placeholder="Annota idee, domande o insight mentre guardi il video…"
+                className="min-h-[140px] resize-none text-sm"
+              />
+              <p className="mt-2 text-[10px] text-muted-foreground">Le note sono salvate nel tuo browser.</p>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
