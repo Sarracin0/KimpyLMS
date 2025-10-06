@@ -3,9 +3,9 @@
 import dynamic from 'next/dynamic'
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from 'react'
 import { toast } from 'react-hot-toast'
-import { Loader2, Lock, MessageCircle, NotebookPen, Sparkles, X } from 'lucide-react'
+import { Loader2, Lock, MessageCircle, NotebookPen, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Play, Pause, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -14,9 +14,11 @@ import type { VideoCheckpoint } from '@/types/video'
 
 type ProgressState = {
   playedSeconds: number
+  played?: number
 }
 
 const ReactPlayer = dynamic(() => import('react-player'), { ssr: false })
+type ReactPlayerInstance = import('react-player').ReactPlayer
 
 interface VideoPlayerProps {
   courseId: string
@@ -66,6 +68,13 @@ export const VideoPlayer = ({
   const notesStorageKey = useMemo(() => `chapter-notes:${chapterId}`, [chapterId])
   const [notesDraft, setNotesDraft] = useState('')
   const [isNotesOpen, setIsNotesOpen] = useState(false)
+  const [played, setPlayed] = useState(0)
+  const [playedSeconds, setPlayedSeconds] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const playerRef = useRef<ReactPlayerInstance | null>(null)
 
   useEffect(() => {
     setIsPlaying(!isLocked)
@@ -76,6 +85,9 @@ export const VideoPlayer = ({
     setActiveCheckpointId(null)
     setSeenCheckpointIds(new Set())
     setIsNotesOpen(false)
+    setPlayed(0)
+    setPlayedSeconds(0)
+    setDuration(0)
   }, [videoUrl])
 
   useEffect(() => {
@@ -98,6 +110,15 @@ export const VideoPlayer = ({
     window.localStorage.setItem(notesStorageKey, notesDraft)
   }, [notesDraft, notesStorageKey])
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isFull = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement)
+      setIsFullscreen(isFull)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+
   const orderedCheckpoints = useMemo(
     () => [...checkpoints].sort((a, b) => a.timeInSeconds - b.timeInSeconds),
     [checkpoints],
@@ -107,6 +128,28 @@ export const VideoPlayer = ({
     () => orderedCheckpoints.find((checkpoint) => checkpoint.id === activeCheckpointId) ?? null,
     [orderedCheckpoints, activeCheckpointId],
   )
+
+  const timelineMarkers = useMemo(() => {
+    if (!duration || duration <= 0) return []
+    return orderedCheckpoints.map((checkpoint) => ({
+      id: checkpoint.id,
+      position: Math.min(Math.max(checkpoint.timeInSeconds / duration, 0), 1),
+      type: checkpoint.action?.type ?? 'MESSAGE',
+    }))
+  }, [duration, orderedCheckpoints])
+
+  const markerColor = (type: string) => {
+    switch (type) {
+      case 'QUIZ':
+        return 'bg-emerald-400'
+      case 'SCENARIO':
+        return 'bg-sky-400'
+      case 'FLASHCARDS':
+        return 'bg-orange-400'
+      default:
+        return 'bg-white/80'
+    }
+  }
 
   const onEnd = useCallback(async () => {
     try {
@@ -135,6 +178,13 @@ export const VideoPlayer = ({
     (state: ProgressState) => {
       if (isLocked || !videoUrl) return
       if (activeCheckpoint) return
+
+      if (typeof state.played === 'number') {
+        setPlayed(state.played)
+      }
+      if (typeof state.playedSeconds === 'number') {
+        setPlayedSeconds(state.playedSeconds)
+      }
 
       const nextCheckpoint = orderedCheckpoints.find(
         (checkpoint) => !seenCheckpointIds.has(checkpoint.id) && state.playedSeconds >= checkpoint.timeInSeconds,
@@ -172,6 +222,80 @@ export const VideoPlayer = ({
     }
   }
 
+  const togglePlay = () => {
+    if (activeCheckpoint) return
+    setIsPlaying((previous) => {
+      const next = !previous
+      if (next) {
+        setIsNotesOpen(false)
+      }
+      return next
+    })
+  }
+
+  const seekToClientPosition = (clientX: number, target: HTMLDivElement) => {
+    const rect = target.getBoundingClientRect()
+    const fraction = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1)
+    playerRef.current?.seekTo(fraction, 'fraction')
+    setPlayed(fraction)
+    setPlayedSeconds(fraction * duration)
+  }
+
+  const handleSeek = (event: ReactMouseEvent<HTMLDivElement>) => {
+    seekToClientPosition(event.clientX, event.currentTarget)
+  }
+
+  const handleSeekTouch = (event: ReactTouchEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    const touch = event.touches[0]
+    if (!touch) return
+    seekToClientPosition(touch.clientX, event.currentTarget)
+  }
+
+  const toggleMute = () => {
+    setIsMuted((prev) => !prev)
+  }
+
+  const toggleFullscreen = () => {
+    if (typeof document === 'undefined') return
+    const node = containerRef.current
+    if (!node) return
+    const exit = () => {
+      if (document.exitFullscreen) {
+        void document.exitFullscreen().catch(() => undefined)
+      } else if ((document as any).webkitExitFullscreen) {
+        ;(document as any).webkitExitFullscreen()
+      }
+    }
+
+    const enter = () => {
+      const element = node as any
+      if (element.requestFullscreen) {
+        void element.requestFullscreen().catch(() => undefined)
+      } else if (element.webkitRequestFullscreen) {
+        element.webkitRequestFullscreen()
+      }
+    }
+
+    const isFull = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement)
+    if (isFull) {
+      exit()
+    } else {
+      enter()
+    }
+  }
+
+  const handlePlayerRef = (instance: ReactPlayerInstance | null) => {
+    playerRef.current = instance
+  }
+
+  const formatDuration = (value: number) => {
+    if (!Number.isFinite(value) || value <= 0) return '00:00'
+    const minutes = Math.floor(value / 60)
+    const seconds = Math.floor(value % 60)
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
+
   const playerShouldPlay = !isLocked && isPlaying && !activeCheckpoint
   const actionUrl = activeCheckpoint ? buildCheckpointUrl(courseId, activeCheckpoint) : null
   const actionType = activeCheckpoint?.action?.type ?? 'MESSAGE'
@@ -187,7 +311,7 @@ export const VideoPlayer = ({
             : 'Continua'
 
   return (
-    <div className="relative aspect-video">
+    <div className="relative aspect-video" ref={containerRef}>
       {!isReady && !isLocked ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/80">
           <Loader2 className="h-8 w-8 animate-spin text-white" />
@@ -208,26 +332,106 @@ export const VideoPlayer = ({
       ) : null}
 
       {videoUrl && !isLocked ? (
-        <ReactPlayer
-          url={videoUrl}
-          width="100%"
-          height="100%"
-          controls
-          playing={playerShouldPlay}
-          onReady={() => setIsReady(true)}
-          onPlay={() => {
-            setIsPlaying(true)
-          }}
-          onPause={() => {
-            setIsPlaying(false)
-            setIsNotesOpen(true)
-          }}
-          onEnded={onEnd}
-          onProgress={handleProgress}
-          progressInterval={750}
-          config={{ file: { attributes: { controlsList: 'nodownload', playsInline: true, title } } }}
-          style={{ borderRadius: '0.75rem', overflow: 'hidden' }}
-        />
+        <div className="relative h-full w-full overflow-hidden rounded-xl bg-black">
+          <ReactPlayer
+            url={videoUrl}
+            width="100%"
+            height="100%"
+            playing={playerShouldPlay}
+            controls={false}
+            onReady={() => setIsReady(true)}
+            onPlay={() => {
+              setIsPlaying(true)
+              setIsNotesOpen(false)
+            }}
+            onPause={() => {
+              setIsPlaying(false)
+              setIsNotesOpen(true)
+            }}
+            onEnded={onEnd}
+            onProgress={handleProgress}
+            progressInterval={750}
+            muted={isMuted}
+            volume={isMuted ? 0 : 1}
+            config={{
+              file: { attributes: { controlsList: 'nodownload', playsInline: true, title } },
+              youtube: {
+                playerVars: {
+                  controls: 0,
+                  modestbranding: 1,
+                  fs: 0,
+                  iv_load_policy: 3,
+                  rel: 0,
+                },
+              },
+              vimeo: {
+                playerOptions: {
+                  controls: false,
+                  title: false,
+                  portrait: false,
+                  byline: false,
+                },
+              },
+            }}
+            ref={handlePlayerRef}
+            onDuration={(value) => setDuration(Number.isFinite(value) ? value : 0)}
+          />
+
+          {!activeCheckpoint ? (
+            <div className="pointer-events-none absolute inset-0 flex flex-col justify-end">
+              <div className={`pointer-events-none absolute inset-0 transition-opacity ${isPlaying ? 'opacity-0' : 'opacity-100'} bg-black/60`} />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <div className="pointer-events-auto relative z-10 flex w-full items-center gap-3 px-4 pb-4">
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:bg-primary/90"
+                >
+                  {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                </button>
+                <div className="flex flex-1 flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-white/85">{formatDuration(playedSeconds)}</span>
+                    <div
+                      className="relative h-2 flex-1 cursor-pointer rounded-full bg-white/25"
+                      onMouseDown={handleSeek}
+                      onClick={handleSeek}
+                      onTouchStart={handleSeekTouch}
+                    >
+                      <div className="absolute inset-y-0 left-0 rounded-full bg-primary transition-all" style={{ width: `${played * 100}%` }} />
+                      {timelineMarkers.map((marker) => (
+                        <span
+                          key={marker.id}
+                          className={`absolute top-0 bottom-0 w-[3px] -translate-x-1/2 rounded-full ${markerColor(marker.type)}`}
+                          style={{ left: `${marker.position * 100}%` }}
+                        />
+                      ))}
+                      <span
+                        className="absolute top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full border border-white/80 bg-primary shadow-sm"
+                        style={{ left: `${played * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-semibold text-white/85">{formatDuration(duration)}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleMute}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-slate-900 shadow transition hover:bg-white"
+                >
+                  {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-slate-900 shadow transition hover:bg-white"
+                >
+                  {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
      {activeCheckpoint ? (
