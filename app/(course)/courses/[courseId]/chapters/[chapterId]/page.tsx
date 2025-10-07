@@ -8,6 +8,8 @@ import { Preview } from '@/components/preview'
 import { Separator } from '@/components/ui/separator'
 import { requireAuthContext } from '@/lib/current-profile'
 
+import { AttachmentResourceList } from '../../_components/attachment-resource-list'
+
 import CourseEnrollButton from './_components/course-enroll-button'
 import { CourseProgressButton } from './_components/course-progress-button'
 import { VideoPlayer } from './_components/video-player'
@@ -120,18 +122,8 @@ export default async function ChapterDetails({ params }: ChapterDetailsProps) {
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Documenti allegati</h3>
                 {block.attachments && block.attachments.length > 0 ? (
-                  <div className="mt-3 space-y-2">
-                    {block.attachments.map((attachment) => (
-                      <a
-                        key={attachment.id}
-                        className="flex w-full items-center justify-between rounded-lg border border-white/40 bg-white/60 p-3 text-sm text-foreground transition-colors backdrop-blur-md supports-[backdrop-filter]:bg-white/50 hover:bg-white/70"
-                        target="_blank"
-                        href={attachment.url}
-                        rel="noreferrer"
-                      >
-                        {attachment.name}
-                      </a>
-                    ))}
+                  <div className="mt-3">
+                    <AttachmentResourceList attachments={block.attachments} contextLabel={block.title || chapter.title} />
                   </div>
                 ) : (
                   <p className="mt-2 text-xs text-muted-foreground">
@@ -165,19 +157,7 @@ export default async function ChapterDetails({ params }: ChapterDetailsProps) {
 
         {/* Attachments (already styled to glass links) */}
         {attachments && attachments.length > 0 && block?.type !== 'RESOURCES' ? (
-          <div className="space-y-2">
-            {attachments.map((attachment) => (
-              <a
-                className="flex w-full items-center justify-between rounded-lg border border-white/30 bg-white/50 p-3 text-sm text-foreground transition-colors backdrop-blur-md supports-[backdrop-filter]:bg-white/40 hover:bg-white/60"
-                key={attachment.id}
-                target="_blank"
-                href={attachment.url}
-                rel="noreferrer"
-              >
-                {attachment.name}
-              </a>
-            ))}
-          </div>
+          <AttachmentResourceList attachments={attachments} contextLabel={chapter.title} />
         ) : null}
       </div>
     </div>

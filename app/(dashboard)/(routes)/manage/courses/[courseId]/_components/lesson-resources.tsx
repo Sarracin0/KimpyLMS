@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { Paperclip, Trash2 } from 'lucide-react'
+import { Eye, Paperclip, Trash2 } from 'lucide-react'
 import type { Attachment } from '@prisma/client'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FileUpload } from '@/components/file-upload'
+import { PdfViewerDialog, isPdfAttachment } from '@/components/pdf-viewer'
 import { cn } from '@/lib/utils'
 
 type LessonResourcesProps = {
@@ -27,6 +28,8 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
   const [items, setItems] = useState(initialItems)
   const [linkForm, setLinkForm] = useState<LessonLinkFormState>({ url: '', name: '' })
   const [isLinkSaving, setIsLinkSaving] = useState(false)
+  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
   const refresh = (next: Attachment[]) => {
     setItems(next)
@@ -85,6 +88,13 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
     }
   }
 
+  const handlePreviewOpenChange = (nextOpen: boolean) => {
+    setIsPreviewOpen(nextOpen)
+    if (!nextOpen) {
+      setPreviewAttachment(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 p-4">
@@ -134,13 +144,30 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
                   <p className="text-xs text-muted-foreground">{item.type ?? 'file'}</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                {isPdfAttachment(item) && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setPreviewAttachment(item)
+                      setIsPreviewOpen(true)
+                    }}
+                    title="Anteprima"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ))
         )}
       </div>
+
+      <PdfViewerDialog open={isPreviewOpen} onOpenChange={handlePreviewOpenChange} attachment={previewAttachment} contextLabel="Risorsa lezione" />
     </div>
   )
 }
