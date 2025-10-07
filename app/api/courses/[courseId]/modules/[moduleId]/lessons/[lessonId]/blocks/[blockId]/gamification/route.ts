@@ -123,6 +123,9 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
     let generation: GamificationGenerationResult
 
     try {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Gamification API] starting generation', { blockId, contentType, attachmentCount: attachments.length })
+      }
       generation = await generateGamificationContent({
         companyId: company.id,
         courseId,
@@ -136,6 +139,20 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
         attachments,
         settings,
       })
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Gamification API] generation result meta', {
+          blockId,
+          requestedContentType: contentType,
+          generationType: generation.type,
+          hasQuiz: Boolean(generation.quiz),
+          hasFlashcards: Boolean(generation.flashcards),
+          hasScenario: Boolean(generation.scenario),
+          hasArena: Boolean(generation.arena),
+          attachmentIds,
+          settings,
+        })
+      }
+
     } catch (error) {
       await db.gamificationBlock.update({
         where: { id: gamification.id },
@@ -327,6 +344,9 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
       })
     } else if (contentType === GamificationContentType.ARENA && generation.arena) {
       const arenaPayload = generation.arena
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Gamification API] arena payload', { blockId, generationType: generation.type, arenaPayload })
+      }
       if (!arenaPayload.axes || arenaPayload.axes.length === 0) {
         await db.gamificationBlock.update({
           where: { id: gamification.id },
@@ -372,6 +392,15 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
       return new NextResponse('Unexpected generation result', { status: 422 })
     }
 
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[Gamification API] pre-refresh update summary', {
+        blockId,
+        persistedContentType: contentType,
+        generationType: generation.type,
+        status: 'READY',
+      })
+    }
+
     const refreshedBlock = await db.lessonBlock.findUnique({
       where: { id: block.id },
       include: {
@@ -392,6 +421,15 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
         },
       },
     })
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[Gamification API] refreshed block state', {
+        blockId: block.id,
+        persistedType: refreshedBlock?.gamification?.contentType,
+        persistedStatus: refreshedBlock?.gamification?.status,
+        hasArenaResult: Boolean(refreshedBlock?.gamification?.result),
+      })
+    }
+
 
     return NextResponse.json({
       block: refreshedBlock,

@@ -89,8 +89,18 @@ const mapFlashcardDeck = (deck?: (DbFlashcardDeck & { cards: DbFlashcardCard[] }
 const mapBlockFromDb = (block: BlockPayload): LessonBlock => {
   const scenarioPayload = extractScenarioPayload(block.gamification?.result ?? null)
   const scenarioSummary = scenarioPayload ? summarizeScenario(scenarioPayload) : null
+
   const arenaPayload = extractArenaPayload(block.gamification?.result ?? null)
   const arenaSummary = arenaPayload ? summarizeArena(arenaPayload) : null
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.debug('[CurriculumManager] mapBlockFromDb', {
+      blockId: block.id,
+      originalContentType: block.gamification?.contentType,
+      scenarioSummary,
+      arenaSummary,
+    })
+  }
 
   return {
     id: block.id,

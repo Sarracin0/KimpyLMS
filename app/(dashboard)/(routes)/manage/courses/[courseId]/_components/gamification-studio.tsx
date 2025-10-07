@@ -223,6 +223,15 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
       const scenarioPayload = extractScenarioPayload(gamificationRaw?.result ?? null)
       const mappedScenarioSummary = scenarioPayload ? summarizeScenario(scenarioPayload) : null
 
+      if (process.env.NODE_ENV !== 'production') {
+        console.groupCollapsed('[GamificationStudio] buildNextBlock');
+        console.log('raw gamification payload', gamificationRaw);
+        console.log('extracted scenario payload', scenarioPayload);
+        console.log('extracted arena payload', arenaPayload);
+        console.log('incoming block snapshot', block);
+        console.groupEnd();
+      }
+
       const arenaPayload = extractArenaPayload(gamificationRaw?.result ?? null)
       const mappedArenaSummary = arenaPayload ? summarizeArena(arenaPayload) : null
 
@@ -237,6 +246,9 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
         ? (contentTypeValue as StudioContentType)
         : ((block.gamification?.contentType as StudioContentType) ?? contentType)
 
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[GamificationStudio] normalized content type', normalizedContentType, 'from value', contentTypeValue, 'current state', contentType);
+      }
       const sourceAttachmentIds = Array.isArray(gamificationRaw?.sourceAttachmentIds)
         ? (gamificationRaw?.sourceAttachmentIds as unknown[]).filter((value): value is string => typeof value === 'string')
         : block.gamification?.sourceAttachmentIds ?? []
@@ -295,6 +307,13 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
       }
 
       const nextBlock = buildNextBlock(payload)
+      if (process.env.NODE_ENV !== 'production') {
+        console.groupCollapsed('[GamificationStudio] handleGenerate result');
+        console.log('API payload block', payload);
+        console.log('next block gamification', nextBlock.gamification);
+        console.log('next content type', nextContentType);
+        console.groupEnd();
+      }
       const nextContentType = (nextBlock.gamification?.contentType as StudioContentType | undefined) ?? contentType
       setContentType(nextContentType)
       setSelectedDocs(nextBlock.gamification?.sourceAttachmentIds ?? [])
