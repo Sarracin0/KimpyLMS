@@ -51,6 +51,11 @@ type ActivityOption =
     }
   | {
       id: string
+      type: 'ARENA'
+      label: string
+    }
+  | {
+      id: string
       type: 'FLASHCARDS'
       label: string
       deckId: string
@@ -63,9 +68,10 @@ type VideoCheckpointFormState = {
   timeInSeconds: number
   title: string
   description: string
-  actionType: 'MESSAGE' | 'QUIZ' | 'SCENARIO' | 'FLASHCARDS'
+  actionType: 'MESSAGE' | 'QUIZ' | 'SCENARIO' | 'ARENA' | 'FLASHCARDS'
   quizBlockId: string
   scenarioBlockId: string
+  arenaBlockId: string
   flashcardDeckId: string
   messageCtaLabel: string
   messageCtaUrl: string
@@ -79,6 +85,7 @@ const createEmptyFormState = (timeInSeconds = 30): VideoCheckpointFormState => (
   actionType: 'MESSAGE',
   quizBlockId: '',
   scenarioBlockId: '',
+  arenaBlockId: '',
   flashcardDeckId: '',
   messageCtaLabel: 'Continua',
   messageCtaUrl: '',
@@ -118,6 +125,9 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
             if (lessonBlock.gamification.contentType === 'SCENARIO') {
               return [{ id: lessonBlock.id, type: 'SCENARIO', label: lessonBlock.title || 'Decision Lab' }]
             }
+            if (lessonBlock.gamification.contentType === 'ARENA') {
+              return [{ id: lessonBlock.id, type: 'ARENA', label: lessonBlock.title || 'Practice Arena' }]
+            }
             if (
               lessonBlock.gamification.contentType === 'FLASHCARDS' &&
               lessonBlock.gamification.flashcardDeck?.id
@@ -139,6 +149,7 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
 
   const quizList = activityOptions.filter((option) => option.type === 'QUIZ')
   const scenarioList = activityOptions.filter((option) => option.type === 'SCENARIO')
+  const arenaList = activityOptions.filter((option) => option.type === 'ARENA')
   const flashcardList = activityOptions.filter(
     (option): option is Extract<ActivityOption, { type: 'FLASHCARDS' }> => option.type === 'FLASHCARDS',
   )
@@ -168,6 +179,7 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
       actionType: checkpoint.action?.type ?? 'MESSAGE',
       quizBlockId: checkpoint.action?.type === 'QUIZ' ? checkpoint.action.blockId : '',
       scenarioBlockId: checkpoint.action?.type === 'SCENARIO' ? checkpoint.action.blockId : '',
+      arenaBlockId: checkpoint.action?.type === 'ARENA' ? checkpoint.action.blockId : '',
       flashcardDeckId: checkpoint.action?.type === 'FLASHCARDS' ? checkpoint.action.deckId : '',
       messageCtaLabel: checkpoint.action?.type === 'MESSAGE' ? checkpoint.action.ctaLabel ?? '' : 'Continua',
       messageCtaUrl: checkpoint.action?.type === 'MESSAGE' ? checkpoint.action.ctaUrl ?? '' : '',
@@ -254,6 +266,17 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
       }
     }
 
+    if (formState.actionType === 'ARENA') {
+      if (!formState.arenaBlockId) {
+        toast.error('Collega una Practice Arena esistente')
+        return
+      }
+      action = {
+        type: 'ARENA',
+        blockId: formState.arenaBlockId,
+      }
+    }
+
     if (formState.actionType === 'FLASHCARDS') {
       if (!formState.flashcardDeckId) {
         toast.error('Seleziona un deck di flashcard')
@@ -292,6 +315,12 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
         return (
           <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
             Decision Lab
+          </Badge>
+        )
+      case 'ARENA':
+        return (
+          <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+            Practice Arena
           </Badge>
         )
       case 'FLASHCARDS':
@@ -435,6 +464,11 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
                         <Sparkles className="h-3.5 w-3.5" /> Decision Lab
                       </div>
                     </SelectItem>
+                    <SelectItem value="ARENA">
+                      <div className="flex items-center gap-2">
+                        <PencilLine className="h-3.5 w-3.5" /> Practice Arena
+                      </div>
+                    </SelectItem>
                     <SelectItem value="FLASHCARDS">
                       <div className="flex items-center gap-2">
                         <Layers className="h-3.5 w-3.5" /> Flashcard deck
@@ -512,6 +546,33 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
                       </SelectTrigger>
                       <SelectContent>
                         {scenarioList.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              ) : null}
+
+              {formState.actionType === 'ARENA' ? (
+                <div className="space-y-2">
+                  <Label>Practice Arena</Label>
+                  {arenaList.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Nessuna Practice Arena disponibile. Generane una dal blocco Gamification per collegarla al video.
+                    </p>
+                  ) : (
+                    <Select
+                      value={formState.arenaBlockId}
+                      onValueChange={(value) => setFormState((prev) => ({ ...prev, arenaBlockId: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleziona una Practice Arena" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {arenaList.map((option) => (
                           <SelectItem key={option.id} value={option.id}>
                             {option.label}
                           </SelectItem>

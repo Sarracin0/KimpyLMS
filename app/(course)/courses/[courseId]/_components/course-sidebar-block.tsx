@@ -1,6 +1,6 @@
 'use client'
 
-import { LockIcon, PlayCircleIcon, FileTextIcon, VideoIcon, GitBranch, ListChecks } from 'lucide-react'
+import { LockIcon, PlayCircleIcon, FileTextIcon, VideoIcon, GitBranch, ListChecks, PenSquareIcon } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { BlockData } from './course-sidebar.types'
@@ -33,6 +33,7 @@ export default function CourseSidebarBlock({ block, courseId, isLocked }: Course
       case 'GAMIFICATION':
         if (block.gamification?.contentType === 'FLASHCARDS') return FileTextIcon
         if (block.gamification?.contentType === 'SCENARIO') return GitBranch
+        if (block.gamification?.contentType === 'ARENA') return PenSquareIcon
         return ListChecks
       default:
         return FileTextIcon
@@ -66,6 +67,11 @@ export default function CourseSidebarBlock({ block, courseId, isLocked }: Course
 
         if (contentType === 'SCENARIO') {
           router.push(`/courses/${courseId}/scenarios/${block.id}`)
+          return
+        }
+
+        if (contentType === 'ARENA') {
+          router.push(`/courses/${courseId}/arenas/${block.id}`)
           return
         }
 

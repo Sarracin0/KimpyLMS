@@ -117,10 +117,49 @@ export type GeneratedScenarioPayload = {
   debrief: GeneratedScenarioDebrief
 }
 
+export type GeneratedArenaAxisLevels = {
+  excels?: string
+  solid?: string
+  needsSupport?: string
+}
+
+export type GeneratedArenaAxis = {
+  id: string
+  label: string
+  description?: string | null
+  weight?: number | null
+  levels: GeneratedArenaAxisLevels
+  coachingTips?: string[]
+}
+
+export type GeneratedArenaTokens = {
+  baseAward: number
+  improvementBonus: number
+  endorsementBonus: number
+}
+
+export type GeneratedArenaPayload = {
+  title: string
+  scenarioBrief: string
+  learnerRole: string
+  objectives: string[]
+  challenge: string
+  submissionPrompt: string
+  iterationPrompt: string
+  peerReviewPrompt: string
+  expectedSections: string[]
+  axes: GeneratedArenaAxis[]
+  aiCoachTips: string[]
+  estimatedDurationMinutes?: number | null
+  sampleHighScorePlan?: string | null
+  tokens: GeneratedArenaTokens
+}
+
 export type GamificationGenerationResult = {
   type: GamificationContentType
   raw?: unknown
   quiz?: GeneratedQuizPayload
   flashcards?: GeneratedFlashcardPayload
   scenario?: GeneratedScenarioPayload
+  arena?: GeneratedArenaPayload
 }

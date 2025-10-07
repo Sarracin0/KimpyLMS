@@ -86,10 +86,10 @@ export type LessonBlock = {
     pointsReward: number
   } | null
   videoCheckpoints?: VideoCheckpoint[] | null
-  gamification?: {
-    id: string
-    status: import('@prisma/client').GamificationStatus
-    contentType: import('@prisma/client').GamificationContentType
+    gamification?: {
+      id: string
+      status: import('@prisma/client').GamificationStatus
+      contentType: 'QUIZ' | 'FLASHCARDS' | 'SCENARIO' | 'ARENA'
     quizId: string | null
     sourceAttachmentIds: string[]
     config: Record<string, unknown> | null
@@ -110,6 +110,13 @@ export type LessonBlock = {
       intro: string
       objectives: string[]
       nodeCount: number
+      estimatedDurationMinutes: number | null
+    } | null
+    arenaSummary: {
+      title: string
+      learnerRole: string
+      axes: number
+      objectives: number
       estimatedDurationMinutes: number | null
     } | null
   } | null

@@ -18,6 +18,7 @@ import type { GamificationContentType, GamificationStatus } from '@prisma/client
 import { Loader2, RefreshCw, Sparkles, FileText, ExternalLink, ListChecks, GitBranch } from 'lucide-react'
 import { logError } from '@/lib/logger'
 import { extractScenarioPayload, summarizeScenario } from '@/lib/gamification/scenario'
+import { extractArenaPayload, summarizeArena } from '@/lib/gamification/arena'
 
 type CourseDocument = {
   id: string
@@ -27,6 +28,8 @@ type CourseDocument = {
   scope: string
   chapterId: string | null
 }
+
+type StudioContentType = 'QUIZ' | 'FLASHCARDS' | 'SCENARIO' | 'ARENA'
 
 type GamificationStudioProps = {
   courseId: string
@@ -44,6 +47,9 @@ type GenerationSettings = {
   nodeCount: number
   focusCompetency: string
   riskProfile: 'prudente' | 'bilanciato' | 'audace'
+  axisCount: number
+  iterationGoal: string
+  peerVisibility: 'private' | 'team' | 'company'
   notes?: string
 }
 
@@ -62,11 +68,14 @@ const DEFAULT_SETTINGS: GenerationSettings = {
   nodeCount: 5,
   focusCompetency: '',
   riskProfile: 'bilanciato',
+  axisCount: 3,
+  iterationGoal: '',
+  peerVisibility: 'team',
   notes: '',
 }
 
 const STATUS_VALUES = ['DRAFT', 'GENERATING', 'READY', 'FAILED'] as const
-const CONTENT_VALUES = ['QUIZ', 'FLASHCARDS', 'SCENARIO'] as const
+const CONTENT_VALUES = ['QUIZ', 'FLASHCARDS', 'SCENARIO', 'ARENA'] as const
 
 const ensureString = (value: unknown) => (typeof value === 'string' ? value : '')
 const ensureNullableString = (value: unknown) => (typeof value === 'string' ? value : null)
@@ -86,7 +95,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
   const [isSavingDoc, setIsSavingDoc] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [selectedDocs, setSelectedDocs] = useState<string[]>(block.gamification?.sourceAttachmentIds ?? [])
-  const [contentType, setContentType] = useState<GamificationContentType>(block.gamification?.contentType ?? 'QUIZ')
+  const [contentType, setContentType] = useState<StudioContentType>((block.gamification?.contentType as StudioContentType) ?? 'QUIZ')
   const [settings, setSettings] = useState<GenerationSettings>({ ...DEFAULT_SETTINGS })
   const [newDoc, setNewDoc] = useState<{ name: string; url: string }>({ name: '', url: '' })
 
@@ -97,6 +106,8 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
   const flashcardManageHref = flashcardDeck ? `/manage/courses/${courseId}/flashcards/${flashcardDeck.id}` : '#'
   const scenarioSummary = block.gamification?.scenarioSummary ?? null
   const scenarioPreviewHref = `/courses/${courseId}/scenarios/${block.id}`
+  const arenaSummary = block.gamification?.arenaSummary ?? null
+  const arenaPreviewHref = `/courses/${courseId}/arenas/${block.id}`
 
   const loadDocuments = useCallback(async () => {
     try {
@@ -118,7 +129,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
 
   useEffect(() => {
     if (!block.gamification) return
-    setContentType(block.gamification.contentType)
+    setContentType(block.gamification.contentType as StudioContentType)
     setSelectedDocs(block.gamification.sourceAttachmentIds)
     if (block.gamification.config && typeof block.gamification.config === 'object') {
       setSettings((prev) => ({
@@ -210,9 +221,10 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
         : null
 
       const scenarioPayload = extractScenarioPayload(gamificationRaw?.result ?? null)
-      const mappedScenarioSummary = scenarioPayload
-        ? summarizeScenario(scenarioPayload)
-        : null
+      const mappedScenarioSummary = scenarioPayload ? summarizeScenario(scenarioPayload) : null
+
+      const arenaPayload = extractArenaPayload(gamificationRaw?.result ?? null)
+      const mappedArenaSummary = arenaPayload ? summarizeArena(arenaPayload) : null
 
       const statusValue = ensureString(gamificationRaw?.status)
       const contentTypeValue = ensureString(gamificationRaw?.contentType)
@@ -221,9 +233,9 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
         ? (statusValue as GamificationStatus)
         : block.gamification?.status ?? 'DRAFT'
 
-      const normalizedContentType = CONTENT_VALUES.includes(contentTypeValue as (typeof CONTENT_VALUES)[number])
-        ? (contentTypeValue as GamificationContentType)
-        : block.gamification?.contentType ?? contentType
+      const normalizedContentType = CONTENT_VALUES.includes(contentTypeValue as StudioContentType)
+        ? (contentTypeValue as StudioContentType)
+        : ((block.gamification?.contentType as StudioContentType) ?? contentType)
 
       const sourceAttachmentIds = Array.isArray(gamificationRaw?.sourceAttachmentIds)
         ? (gamificationRaw?.sourceAttachmentIds as unknown[]).filter((value): value is string => typeof value === 'string')
@@ -243,7 +255,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
           ? {
               id: ensureString(gamificationRaw.id) || block.gamification?.id || generateId(),
               status: normalizedStatus,
-              contentType: normalizedContentType,
+              contentType: normalizedContentType as unknown as GamificationContentType,
               quizId:
                 ensureNullableString(gamificationRaw.quizId) ??
                 ensureNullableString(quizRaw?.id) ??
@@ -253,6 +265,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               flashcardDeck: mappedFlashcards,
               quizSummary: mappedQuizSummary ?? block.gamification?.quizSummary ?? null,
               scenarioSummary: mappedScenarioSummary ?? block.gamification?.scenarioSummary ?? null,
+              arenaSummary: mappedArenaSummary ?? block.gamification?.arenaSummary ?? null,
             }
           : block.gamification ?? null,
         quizSummary: mappedQuizSummary ?? block.quizSummary ?? null,
@@ -282,6 +295,9 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
       }
 
       const nextBlock = buildNextBlock(payload)
+      const nextContentType = (nextBlock.gamification?.contentType as StudioContentType | undefined) ?? contentType
+      setContentType(nextContentType)
+      setSelectedDocs(nextBlock.gamification?.sourceAttachmentIds ?? [])
       onReplaceBlock(moduleId, lessonId, block.id, nextBlock)
       toast.success('Content generated')
     } catch (error) {
@@ -299,9 +315,17 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
       ? 'Quiz'
       : contentType === 'FLASHCARDS'
         ? 'Flashcards'
-        : 'Decision Lab'
-  const ContentLabelIcon =
-    contentType === 'QUIZ' ? ListChecks : contentType === 'FLASHCARDS' ? FileText : GitBranch
+        : contentType === 'SCENARIO'
+          ? 'Decision Lab'
+          : 'Practice Arena'
+  const ResolvedContentIcon =
+    contentType === 'QUIZ'
+      ? ListChecks
+      : contentType === 'FLASHCARDS'
+        ? FileText
+        : contentType === 'SCENARIO'
+          ? GitBranch
+          : Sparkles
 
   const canGenerate = !isGenerating && selectedDocs.length > 0
 
@@ -367,6 +391,61 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
                 <SelectItem value="playful">Playful</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </div>
+      )
+    }
+    if (contentType === 'ARENA') {
+      return (
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor="axis-count">Evaluation axes</Label>
+            <Input
+              id="axis-count"
+              type="number"
+              min={2}
+              max={5}
+              value={settings.axisCount}
+              onChange={(event) => handleSettingChange('axisCount', Number(event.target.value) || DEFAULT_SETTINGS.axisCount)}
+            />
+            <p className="text-[11px] text-muted-foreground">Suggerito: 3 assi soft-skill per evidenziare comportamento.</p>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="peer-visibility">Peer endorsement</Label>
+            <Select
+              value={settings.peerVisibility}
+              onValueChange={(value: GenerationSettings['peerVisibility']) =>
+                handleSettingChange('peerVisibility', value)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Team" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="private">Nessun endorsement</SelectItem>
+                <SelectItem value="team">Endorsement visibili al team</SelectItem>
+                <SelectItem value="company">Endorsement aperti a tutta l&apos;azienda</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <Label htmlFor="iteration-goal">Focus di miglioramento tra tentativi</Label>
+            <Textarea
+              id="iteration-goal"
+              rows={2}
+              placeholder="Es. Spingere sul coinvolgimento del team e metriche di outcome"
+              value={settings.iterationGoal}
+              onChange={(event) => handleSettingChange('iterationGoal', event.target.value)}
+            />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <Label htmlFor="arena-competency">Soft skill primaria</Label>
+            <Input
+              id="arena-competency"
+              placeholder="Es. comunicazione, leadership, ownership"
+              value={settings.focusCompetency}
+              onChange={(event) => handleSettingChange('focusCompetency', event.target.value)}
+            />
           </div>
         </div>
       )
@@ -438,7 +517,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               {status.toLowerCase()}
             </Badge>
             <Badge variant="secondary" className="gap-1">
-              <ContentLabelIcon className="h-3 w-3" /> {contentLabel}
+              <ResolvedContentIcon className="h-3 w-3" /> {contentLabel}
             </Badge>
           </div>
           <Button variant="ghost" size="sm" onClick={() => void loadDocuments()} disabled={isLoadingDocs}>
@@ -471,9 +550,29 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               </li>
             </ul>
           </div>
+        ) : contentType === 'ARENA' ? (
+          <div className="rounded-lg border border-[#2F90B9]/30 bg-[#2F90B9]/5 p-4 text-xs leading-relaxed text-slate-600">
+            <p className="mb-2 text-sm font-semibold text-[#1b6584]">Practice Arena – cosa ottieni</p>
+            <ul className="list-disc space-y-1 pl-4">
+              <li>
+                L&apos;AI propone uno scenario operativo post-capitolo e chiede ai learner un piano d&apos;azione sintetico da iterare.
+              </li>
+              <li>
+                Il coaching automatico valuta il piano su 2-4 assi soft-skill (es. comunicazione, iniziativa, empatia) e genera
+                feedback mirato, pronto per HR.
+              </li>
+              <li>
+                Gli Insight Tokens vengono assegnati alla prima iterazione efficace e quando i peer rilasciano endorsement: la
+                distribuzione è salvata in <code>ScenarioAttempt</code> (campo <code>attemptType=ARENA</code>).
+              </li>
+              <li>
+                Puoi guidare il taglio dell&apos;esercizio impostando assi prioritari, focus di miglioramento e visibilità degli endorsement.
+              </li>
+            </ul>
+          </div>
         ) : null}
 
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-4">
           <Button
             type="button"
             variant={contentType === 'QUIZ' ? 'default' : 'outline'}
@@ -500,6 +599,15 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             disabled={isGenerating}
           >
             <GitBranch className="mr-2 h-4 w-4" /> Decision Lab
+          </Button>
+          <Button
+            type="button"
+            variant={contentType === 'ARENA' ? 'default' : 'outline'}
+            className="justify-start"
+            onClick={() => setContentType('ARENA')}
+            disabled={isGenerating}
+          >
+            <Sparkles className="mr-2 h-4 w-4" /> Practice Arena
           </Button>
         </div>
 
@@ -681,6 +789,41 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
                   + {scenarioSummary.objectives.length - 3} additional learning goals
                 </p>
               ) : null}
+            </div>
+          </div>
+        )}
+
+        {status === 'READY' && contentType === 'ARENA' && arenaSummary && (
+          <div className="rounded-lg border border-border/40 bg-background/70 p-3 text-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground line-clamp-2">{arenaSummary.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {arenaSummary.axes} axes · ruolo learner: {arenaSummary.learnerRole}
+                  {typeof arenaSummary.estimatedDurationMinutes === 'number'
+                    ? ` · ~${arenaSummary.estimatedDurationMinutes} min`
+                    : ''}
+                </p>
+              </div>
+              <Button asChild size="sm" variant="outline">
+                <Link href={arenaPreviewHref}>
+                  Preview learner view
+                  <ExternalLink className="ml-2 h-3 w-3" />
+                </Link>
+              </Button>
+            </div>
+            <Separator />
+            <div className="grid gap-2 md:grid-cols-2">
+              <div>
+                <p className="text-[11px] font-semibold text-foreground">Learning goals</p>
+                <p className="text-[11px] text-muted-foreground">{arenaSummary.objectives} key outcomes</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-foreground">AI coach focus</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Iterazioni tracciate e Insight Tokens assegnati in automatico.
+                </p>
+              </div>
             </div>
           </div>
         )}

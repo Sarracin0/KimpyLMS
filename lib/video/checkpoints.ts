@@ -36,6 +36,10 @@ export const parseVideoCheckpointAction = (value: unknown): VideoCheckpointActio
       const blockId = ensureString(raw.blockId)
       return blockId ? { type: 'SCENARIO', blockId } : null
     }
+    case 'ARENA': {
+      const blockId = ensureString(raw.blockId)
+      return blockId ? { type: 'ARENA', blockId } : null
+    }
     case 'FLASHCARDS': {
       const deckId = ensureString(raw.deckId)
       return deckId ? { type: 'FLASHCARDS', deckId } : null

@@ -39,6 +39,8 @@ const buildCheckpointUrl = (courseId: string, checkpoint: VideoCheckpoint): stri
       return `/courses/${courseId}/quizzes/${checkpoint.action.blockId}`
     case 'SCENARIO':
       return `/courses/${courseId}/scenarios/${checkpoint.action.blockId}`
+    case 'ARENA':
+      return `/courses/${courseId}/arenas/${checkpoint.action.blockId}`
     case 'FLASHCARDS':
       return `/courses/${courseId}/flashcards/${checkpoint.action.deckId}`
     case 'MESSAGE':
@@ -144,6 +146,8 @@ export const VideoPlayer = ({
         return 'bg-emerald-400'
       case 'SCENARIO':
         return 'bg-sky-400'
+      case 'ARENA':
+        return 'bg-indigo-400'
       case 'FLASHCARDS':
         return 'bg-orange-400'
       default:
@@ -304,8 +308,10 @@ export const VideoPlayer = ({
       ? activeCheckpoint.action.ctaLabel?.trim() || 'Continua'
       : activeCheckpoint?.action?.type === 'QUIZ'
         ? 'Apri quiz'
-        : activeCheckpoint?.action?.type === 'SCENARIO'
-          ? 'Apri Decision Lab'
+      : activeCheckpoint?.action?.type === 'SCENARIO'
+        ? 'Apri Decision Lab'
+        : activeCheckpoint?.action?.type === 'ARENA'
+          ? 'Apri Practice Arena'
           : activeCheckpoint?.action?.type === 'FLASHCARDS'
             ? 'Apri flashcard'
             : 'Continua'

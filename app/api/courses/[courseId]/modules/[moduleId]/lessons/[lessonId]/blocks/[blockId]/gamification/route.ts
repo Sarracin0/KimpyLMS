@@ -325,6 +325,41 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
           result: scenarioResult,
         },
       })
+    } else if (contentType === GamificationContentType.ARENA && generation.arena) {
+      const arenaPayload = generation.arena
+      if (!arenaPayload.axes || arenaPayload.axes.length === 0) {
+        await db.gamificationBlock.update({
+          where: { id: gamification.id },
+          data: {
+            status: GamificationStatus.FAILED,
+            result: { error: 'The model did not return evaluation axes for the arena' } satisfies Prisma.JsonValue,
+          },
+        })
+
+        return new NextResponse('Invalid arena payload', { status: 422 })
+      }
+
+      if (block.quiz) {
+        await db.quiz.delete({ where: { id: block.quiz.id } }).catch(() => undefined)
+      }
+
+      if (gamification.flashcardDeck) {
+        await db.flashcardDeck.delete({ where: { id: gamification.flashcardDeck.id } }).catch(() => undefined)
+      }
+
+      const arenaResult: Prisma.JsonValue = {
+        arena: arenaPayload,
+        raw: generation.raw ?? null,
+      } as Prisma.JsonValue
+
+      await db.gamificationBlock.update({
+        where: { id: gamification.id },
+        data: {
+          status: GamificationStatus.READY,
+          quizId: null,
+          result: arenaResult,
+        },
+      })
     } else {
       await db.gamificationBlock.update({
         where: { id: gamification.id },

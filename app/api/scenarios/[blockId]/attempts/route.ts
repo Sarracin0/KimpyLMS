@@ -158,6 +158,7 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
       data: {
         gamificationBlockId: block.gamification.id,
         userProfileId: profile.id,
+        attemptType: 'SCENARIO',
         path: pathRecords as Prisma.JsonArray,
         score: normalizedScore,
         riskLevel: averageRisk,

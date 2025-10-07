@@ -13,6 +13,10 @@ export type VideoCheckpointAction =
       blockId: string
     }
   | {
+      type: 'ARENA'
+      blockId: string
+    }
+  | {
       type: 'FLASHCARDS'
       deckId: string
     }

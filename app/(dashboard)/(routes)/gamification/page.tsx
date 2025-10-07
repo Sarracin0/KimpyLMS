@@ -5,6 +5,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { UserRole } from '@prisma/client'
 
+type ArenaReflectionSummary = {
+  summary: string
+  improvementAdvice: string
+  scoreDelta: number | null
+  tokensAwarded: number | null
+}
+
+const parseArenaReflections = (value: unknown): ArenaReflectionSummary => {
+  if (!value || typeof value !== 'object') {
+    return { summary: '', improvementAdvice: '', scoreDelta: null, tokensAwarded: null }
+  }
+  const record = value as Record<string, unknown>
+  const evaluation = record.evaluation && typeof record.evaluation === 'object' ? (record.evaluation as Record<string, unknown>) : null
+  return {
+    summary: typeof evaluation?.summary === 'string' ? evaluation.summary : '',
+    improvementAdvice: typeof evaluation?.improvementAdvice === 'string' ? evaluation.improvementAdvice : '',
+    scoreDelta: typeof record.scoreDelta === 'number' ? record.scoreDelta : null,
+    tokensAwarded: typeof record.tokensAwarded === 'number' ? record.tokensAwarded : null,
+  }
+}
+
 export default async function GamificationPage() {
   const { profile, company } = await requireAuthContext()
 
@@ -154,6 +175,9 @@ export default async function GamificationPage() {
     scenarioAttemptPromise,
   ])
 
+  const scenarioLabAttempts = scenarioAttempts.filter((attempt) => attempt.attemptType === 'SCENARIO')
+  const practiceArenaAttempts = scenarioAttempts.filter((attempt) => attempt.attemptType === 'ARENA')
+
   const badgeSummary = Array.from(
     badgeAwards.reduce((map, entry) => {
       const current = map.get(entry.badgeId) ?? {
@@ -226,7 +250,7 @@ export default async function GamificationPage() {
     competencyCounts: Map<string, number>
   }
 
-  const scenarioByCourse = scenarioAttempts.reduce((map, attempt) => {
+  const scenarioByCourse = scenarioLabAttempts.reduce((map, attempt) => {
     const course = attempt.gamificationBlock?.lessonBlock?.lesson?.module?.course
     if (!course) return map
 
@@ -321,7 +345,123 @@ export default async function GamificationPage() {
       .map(([tag, count]) => ({ tag, count })),
   }
 
-  const recentReflections = scenarioAttempts
+  type ArenaAccumulator = {
+    courseId: string
+    courseTitle: string
+    attemptCount: number
+    totalScore: number
+    totalTokens: number
+    totalDelta: number
+    deltaSamples: number
+    improvedAttempts: number
+    userAttempts: Map<string, number>
+  }
+
+  const arenaByCourse = practiceArenaAttempts.reduce((map, attempt) => {
+    const course = attempt.gamificationBlock?.lessonBlock?.lesson?.module?.course
+    if (!course) return map
+
+    const entry: ArenaAccumulator = map.get(course.id) ?? {
+      courseId: course.id,
+      courseTitle: course.title,
+      attemptCount: 0,
+      totalScore: 0,
+      totalTokens: 0,
+      totalDelta: 0,
+      deltaSamples: 0,
+      improvedAttempts: 0,
+      userAttempts: new Map<string, number>(),
+    }
+
+    entry.attemptCount += 1
+    entry.totalScore += attempt.score ?? 0
+    entry.totalTokens += attempt.insightTokens ?? 0
+
+    const reflections = parseArenaReflections(attempt.reflections)
+    if (typeof reflections.scoreDelta === 'number') {
+      entry.totalDelta += reflections.scoreDelta
+      entry.deltaSamples += 1
+      if (reflections.scoreDelta > 0) {
+        entry.improvedAttempts += 1
+      }
+    }
+
+    entry.userAttempts.set(
+      attempt.userProfileId,
+      (entry.userAttempts.get(attempt.userProfileId) ?? 0) + 1,
+    )
+
+    map.set(course.id, entry)
+    return map
+  }, new Map<string, ArenaAccumulator>())
+
+  let overallArenaAttempts = 0
+  let overallArenaScore = 0
+  let overallArenaTokens = 0
+  let overallArenaDelta = 0
+  let overallArenaDeltaSamples = 0
+  let overallArenaImproved = 0
+  const overallArenaUserAttempts = new Map<string, number>()
+
+  const arenaStats = Array.from(arenaByCourse.values())
+    .map((entry) => {
+      overallArenaAttempts += entry.attemptCount
+      overallArenaScore += entry.totalScore
+      overallArenaTokens += entry.totalTokens
+      overallArenaDelta += entry.totalDelta
+      overallArenaDeltaSamples += entry.deltaSamples
+      overallArenaImproved += entry.improvedAttempts
+      for (const [userId, count] of entry.userAttempts.entries()) {
+        overallArenaUserAttempts.set(userId, (overallArenaUserAttempts.get(userId) ?? 0) + count)
+      }
+
+      const userCount = entry.userAttempts.size
+      const repeatUsers = Array.from(entry.userAttempts.values()).filter((count) => count > 1).length
+      return {
+        courseId: entry.courseId,
+        courseTitle: entry.courseTitle,
+        attempts: entry.attemptCount,
+        avgScore: entry.attemptCount ? Math.round(entry.totalScore / entry.attemptCount) : 0,
+        avgImprovement: entry.deltaSamples ? Math.round(entry.totalDelta / entry.deltaSamples) : 0,
+        improvementRate: entry.deltaSamples ? Math.round((entry.improvedAttempts * 100) / entry.deltaSamples) : 0,
+        iterationRate: userCount ? Math.round((repeatUsers * 100) / userCount) : 0,
+        avgTokens: entry.attemptCount ? Math.round(entry.totalTokens / entry.attemptCount) : 0,
+        totalTokens: entry.totalTokens,
+      }
+    })
+    .sort((a, b) => b.attempts - a.attempts)
+
+  const totalArenaUsers = overallArenaUserAttempts.size
+  const totalRepeatArenaUsers = Array.from(overallArenaUserAttempts.values()).filter((count) => count > 1).length
+
+  const overallArenaMetrics = {
+    attempts: overallArenaAttempts,
+    avgScore: overallArenaAttempts ? Math.round(overallArenaScore / overallArenaAttempts) : 0,
+    avgImprovement: overallArenaDeltaSamples ? Math.round(overallArenaDelta / overallArenaDeltaSamples) : 0,
+    improvementRate: overallArenaDeltaSamples ? Math.round((overallArenaImproved * 100) / overallArenaDeltaSamples) : 0,
+    iterationRate: totalArenaUsers ? Math.round((totalRepeatArenaUsers * 100) / totalArenaUsers) : 0,
+    totalTokens: overallArenaTokens,
+  }
+
+  const recentArenaSummaries = practiceArenaAttempts
+    .slice(0, 6)
+    .map((attempt) => {
+      const reflections = parseArenaReflections(attempt.reflections)
+      const course = attempt.gamificationBlock?.lessonBlock?.lesson?.module?.course
+      const blockTitle = attempt.gamificationBlock?.lessonBlock?.title ?? 'Practice Arena'
+      return {
+        id: attempt.id,
+        courseTitle: course?.title ?? 'Course',
+        blockTitle,
+        createdAt: attempt.createdAt,
+        summary: reflections.summary,
+        improvementAdvice: reflections.improvementAdvice,
+        scoreDelta: reflections.scoreDelta,
+        tokens: reflections.tokensAwarded,
+      }
+    })
+
+  const recentReflections = scenarioLabAttempts
     .flatMap((attempt) => {
       const course = attempt.gamificationBlock?.lessonBlock?.lesson?.module?.course
       const blockTitle = attempt.gamificationBlock?.lessonBlock?.title ?? 'Decision Lab'
@@ -523,6 +663,105 @@ export default async function GamificationPage() {
             </CardContent>
           </Card>
         )}
+
+        <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-base">Practice Arena overview</CardTitle>
+            <p className="text-xs text-muted-foreground">Analizza iterazioni, coaching e Insight Tokens generati.</p>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-5">
+            <div className="rounded-md border border-border/40 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">Tentativi registrati</p>
+              <p className="text-lg font-semibold text-foreground">{overallArenaMetrics.attempts}</p>
+            </div>
+            <div className="rounded-md border border-border/40 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">Punteggio medio</p>
+              <p className="text-lg font-semibold text-foreground">{overallArenaMetrics.avgScore}</p>
+            </div>
+            <div className="rounded-md border border-border/40 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">Miglioramento medio</p>
+              <p className="text-lg font-semibold text-foreground">{overallArenaMetrics.avgImprovement}</p>
+            </div>
+            <div className="rounded-md border border-border/40 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">Iterazioni multi-tentativo</p>
+              <p className="text-lg font-semibold text-foreground">{overallArenaMetrics.iterationRate}%</p>
+            </div>
+            <div className="rounded-md border border-border/40 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">Insight Tokens emessi</p>
+              <p className="text-lg font-semibold text-foreground">{overallArenaMetrics.totalTokens}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {arenaStats.length ? (
+          <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Practice Arena per corso</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 overflow-x-auto">
+              <table className="w-full min-w-[600px] text-left text-xs">
+                <thead>
+                  <tr className="text-muted-foreground">
+                    <th className="py-2 font-semibold">Course</th>
+                    <th className="py-2 font-semibold">Attempts</th>
+                    <th className="py-2 font-semibold">Avg score</th>
+                    <th className="py-2 font-semibold">Avg improvement</th>
+                    <th className="py-2 font-semibold">Iteration rate</th>
+                    <th className="py-2 font-semibold">Tokens</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {arenaStats.map((entry) => (
+                    <tr key={entry.courseId}>
+                      <td className="py-2 text-sm font-medium text-foreground">{entry.courseTitle}</td>
+                      <td className="py-2 text-sm text-muted-foreground">{entry.attempts}</td>
+                      <td className="py-2 text-sm text-muted-foreground">{entry.avgScore}</td>
+                      <td className="py-2 text-sm text-muted-foreground">{entry.avgImprovement}</td>
+                      <td className="py-2 text-sm text-muted-foreground">{entry.iterationRate}%</td>
+                      <td className="py-2 text-sm text-muted-foreground">{entry.totalTokens}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              Nessuna Practice Arena ancora attiva. Aggiungi il blocco dal course builder per avviare le iterazioni guidate.
+            </CardContent>
+          </Card>
+        )}
+
+        {recentArenaSummaries.length ? (
+          <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Ultime iterazioni Practice Arena</CardTitle>
+              <p className="text-xs text-muted-foreground">Insight Tokens e miglioramenti più recenti.</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {recentArenaSummaries.map((item) => (
+                <div key={item.id} className="rounded-md border border-border/40 bg-background/70 p-3 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[11px] font-semibold text-foreground">
+                      {item.courseTitle} · {item.blockTitle}
+                    </p>
+                    <Badge variant="outline" className="text-[10px]">
+                      Δ {item.scoreDelta !== null ? item.scoreDelta : 0} · Tokens {item.tokens ?? 0}
+                    </Badge>
+                  </div>
+                  {item.summary ? <p className="mt-2 text-sm text-foreground">{item.summary}</p> : null}
+                  {item.improvementAdvice ? (
+                    <p className="mt-1 text-[11px] text-muted-foreground">Coach tip: {item.improvementAdvice}</p>
+                  ) : null}
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {new Intl.DateTimeFormat('it', { dateStyle: 'medium' }).format(item.createdAt)}
+                  </p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
 
         {recentReflections.length ? (
           <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
