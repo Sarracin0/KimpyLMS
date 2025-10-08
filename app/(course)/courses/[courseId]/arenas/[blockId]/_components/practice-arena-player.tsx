@@ -35,6 +35,7 @@ type ArenaEvaluationReflections = {
   previousScore?: number
   scoreDelta?: number
   tokensAwarded?: number
+  endorsements?: Array<{ profileId?: string; name?: string; createdAt?: string }>
 }
 
 type PracticeArenaPlayerProps = {
@@ -61,11 +62,19 @@ const parseReflections = (value: unknown): ArenaEvaluationReflections | null => 
   const previousScore = typeof record.previousScore === 'number' ? record.previousScore : undefined
   const scoreDelta = typeof record.scoreDelta === 'number' ? record.scoreDelta : undefined
   const tokensAwarded = typeof record.tokensAwarded === 'number' ? record.tokensAwarded : undefined
+  const endorsements = Array.isArray(record.endorsements)
+    ? (record.endorsements as Array<Record<string, unknown>>).map((entry) => ({
+        profileId: typeof entry.profileId === 'string' ? entry.profileId : undefined,
+        name: typeof entry.name === 'string' ? entry.name : undefined,
+        createdAt: typeof entry.createdAt === 'string' ? entry.createdAt : undefined,
+      }))
+    : undefined
   return {
     evaluation,
     previousScore,
     scoreDelta,
     tokensAwarded,
+    endorsements,
   }
 }
 
@@ -292,6 +301,7 @@ export function PracticeArenaPlayer({ blockId, arena, attempts }: PracticeArenaP
             attempts.map((attempt) => {
               const reflections = parseReflections(attempt.reflections)
               const date = new Date(attempt.createdAt)
+              const endorsementCount = reflections?.endorsements?.length ?? 0
               return (
                 <div key={attempt.id} className="rounded-md border border-border/40 bg-background/70 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-foreground">
@@ -299,6 +309,9 @@ export function PracticeArenaPlayer({ blockId, arena, attempts }: PracticeArenaP
                     <div className="flex items-center gap-2 text-xs">
                       <Badge variant="outline">Score {attempt.score}/100</Badge>
                       <Badge variant="outline">Tokens {attempt.insightTokens}</Badge>
+                      {endorsementCount > 0 ? (
+                        <Badge variant="secondary">Endorsement {endorsementCount}</Badge>
+                      ) : null}
                     </div>
                   </div>
                   {reflections?.evaluation?.summary ? (

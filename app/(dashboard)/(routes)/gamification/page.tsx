@@ -4,17 +4,22 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { UserRole } from '@prisma/client'
+import { extractArenaPayload } from '@/lib/gamification/arena'
+import { ArenaEndorseButton } from './_components/arena-endorse-button'
+
+const DEFAULT_ENDORSEMENT_BONUS = 5
 
 type ArenaReflectionSummary = {
   summary: string
   improvementAdvice: string
   scoreDelta: number | null
   tokensAwarded: number | null
+  endorsements: Array<{ profileId?: string; name?: string; createdAt?: string }>
 }
 
 const parseArenaReflections = (value: unknown): ArenaReflectionSummary => {
   if (!value || typeof value !== 'object') {
-    return { summary: '', improvementAdvice: '', scoreDelta: null, tokensAwarded: null }
+    return { summary: '', improvementAdvice: '', scoreDelta: null, tokensAwarded: null, endorsements: [] }
   }
   const record = value as Record<string, unknown>
   const evaluation = record.evaluation && typeof record.evaluation === 'object' ? (record.evaluation as Record<string, unknown>) : null
@@ -23,6 +28,13 @@ const parseArenaReflections = (value: unknown): ArenaReflectionSummary => {
     improvementAdvice: typeof evaluation?.improvementAdvice === 'string' ? evaluation.improvementAdvice : '',
     scoreDelta: typeof record.scoreDelta === 'number' ? record.scoreDelta : null,
     tokensAwarded: typeof record.tokensAwarded === 'number' ? record.tokensAwarded : null,
+    endorsements: Array.isArray(record.endorsements)
+      ? (record.endorsements as Array<Record<string, unknown>>).map((entry) => ({
+          profileId: typeof entry.profileId === 'string' ? entry.profileId : undefined,
+          name: typeof entry.name === 'string' ? entry.name : undefined,
+          createdAt: typeof entry.createdAt === 'string' ? entry.createdAt : undefined,
+        }))
+      : [],
   }
 }
 
@@ -449,15 +461,20 @@ export default async function GamificationPage() {
       const reflections = parseArenaReflections(attempt.reflections)
       const course = attempt.gamificationBlock?.lessonBlock?.lesson?.module?.course
       const blockTitle = attempt.gamificationBlock?.lessonBlock?.title ?? 'Practice Arena'
+      const arenaPayload = extractArenaPayload(attempt.gamificationBlock?.result ?? null)
       return {
         id: attempt.id,
+        blockId: attempt.gamificationBlock?.lessonBlockId ?? '',
         courseTitle: course?.title ?? 'Course',
         blockTitle,
         createdAt: attempt.createdAt,
         summary: reflections.summary,
         improvementAdvice: reflections.improvementAdvice,
         scoreDelta: reflections.scoreDelta,
-        tokens: reflections.tokensAwarded,
+        tokens: reflections.tokensAwarded ?? attempt.insightTokens,
+        endorsements: reflections.endorsements,
+        endorsementBonus: arenaPayload?.tokens?.endorsementBonus ?? DEFAULT_ENDORSEMENT_BONUS,
+        attemptOwnerId: attempt.userProfileId,
       }
     })
 
@@ -740,25 +757,45 @@ export default async function GamificationPage() {
               <p className="text-xs text-muted-foreground">Insight Tokens e miglioramenti più recenti.</p>
             </CardHeader>
             <CardContent className="space-y-3">
-              {recentArenaSummaries.map((item) => (
-                <div key={item.id} className="rounded-md border border-border/40 bg-background/70 p-3 text-xs text-muted-foreground">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold text-foreground">
-                      {item.courseTitle} · {item.blockTitle}
+              {recentArenaSummaries.map((item) => {
+                const alreadyEndorsed = item.endorsements.some((endorser) => endorser.profileId === profile.id)
+                const endorsementCount = item.endorsements.length
+                const canEndorse = Boolean(item.blockId) && profile.id !== item.attemptOwnerId
+                return (
+                  <div key={item.id} className="rounded-md border border-border/40 bg-background/70 p-3 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold text-foreground">
+                        {item.courseTitle} · {item.blockTitle}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px]">
+                          Δ {item.scoreDelta !== null ? item.scoreDelta : 0} · Tokens {item.tokens ?? 0}
+                        </Badge>
+                        {endorsementCount > 0 ? (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Endorsement {endorsementCount}
+                          </Badge>
+                        ) : null}
+                        {canEndorse ? (
+                          <ArenaEndorseButton
+                            blockId={item.blockId}
+                            attemptId={item.id}
+                            alreadyEndorsed={alreadyEndorsed}
+                            endorsementBonus={item.endorsementBonus}
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                    {item.summary ? <p className="mt-2 text-sm text-foreground">{item.summary}</p> : null}
+                    {item.improvementAdvice ? (
+                      <p className="mt-1 text-[11px] text-muted-foreground">Coach tip: {item.improvementAdvice}</p>
+                    ) : null}
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {new Intl.DateTimeFormat('it', { dateStyle: 'medium' }).format(item.createdAt)}
                     </p>
-                    <Badge variant="outline" className="text-[10px]">
-                      Δ {item.scoreDelta !== null ? item.scoreDelta : 0} · Tokens {item.tokens ?? 0}
-                    </Badge>
                   </div>
-                  {item.summary ? <p className="mt-2 text-sm text-foreground">{item.summary}</p> : null}
-                  {item.improvementAdvice ? (
-                    <p className="mt-1 text-[11px] text-muted-foreground">Coach tip: {item.improvementAdvice}</p>
-                  ) : null}
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    {new Intl.DateTimeFormat('it', { dateStyle: 'medium' }).format(item.createdAt)}
-                  </p>
-                </div>
-              ))}
+                )
+              })}
             </CardContent>
           </Card>
         ) : null}
