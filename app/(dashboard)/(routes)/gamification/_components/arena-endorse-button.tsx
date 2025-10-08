@@ -40,6 +40,10 @@ export const ArenaEndorseButton = ({ blockId, attemptId, alreadyEndorsed, endors
     })
   }
 
+  const description = alreadyEndorsed
+    ? 'Hai già riconosciuto questo piano. I token extra sono stati assegnati.'
+    : `Premia il piano con un endorsement: aggiunge ${endorsementBonus} Insight Tokens e segnala agli altri che il contenuto è rilevante.`
+
   return (
     <Button
       type="button"
@@ -47,6 +51,7 @@ export const ArenaEndorseButton = ({ blockId, attemptId, alreadyEndorsed, endors
       variant="secondary"
       disabled={alreadyEndorsed || isPending}
       onClick={handleClick}
+      title={description}
     >
       {alreadyEndorsed ? 'Endorsement registrato' : 'Concedi endorsement'}
     </Button>
