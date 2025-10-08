@@ -760,7 +760,8 @@ export default async function GamificationPage() {
               {recentArenaSummaries.map((item) => {
                 const alreadyEndorsed = item.endorsements.some((endorser) => endorser.profileId === profile.id)
                 const endorsementCount = item.endorsements.length
-                const canEndorse = Boolean(item.blockId) && profile.id !== item.attemptOwnerId
+                // TODO: reintroduce author check when real users are in place
+                const canEndorse = Boolean(item.blockId)
                 return (
                   <div key={item.id} className="rounded-md border border-border/40 bg-background/70 p-3 text-xs text-muted-foreground">
                     <div className="flex flex-wrap items-center justify-between gap-2">
