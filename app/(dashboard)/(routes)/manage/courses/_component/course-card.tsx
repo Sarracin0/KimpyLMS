@@ -1,14 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarClock, MoreHorizontal, Play, Tag } from 'lucide-react'
+import { CalendarClock, MoreHorizontal, Pencil, Play, Tag } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
 import type { ManageCourse } from './manage-courses-client'
+import { AddParticipantsTrigger } from './add-participants-trigger'
 
 export function CourseCard({ course }: { course: ManageCourse }) {
   const total = course.enrollments.length
@@ -35,11 +37,24 @@ export function CourseCard({ course }: { course: ManageCourse }) {
               <h3 className={cn('mt-0.5 truncate text-base font-medium leading-tight')}>{course.title}</h3>
             </div>
           </div>
-          <div className="flex items-start gap-2">
+<div className="flex items-start gap-2">
             <Badge variant={course.isPublished ? 'default' : 'secondary'}>{course.isPublished ? 'Published' : 'Draft'}</Badge>
-            <Button variant="ghost" size="icon" className="opacity-0 transition group-hover:opacity-100">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="opacity-100 group-hover:opacity-100">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <Link href={`/manage/courses/${course.id}`}>
+                  <DropdownMenuItem>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Gestisci
+                  </DropdownMenuItem>
+                </Link>
+                <AddParticipantsTrigger courseId={course.id} />
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
