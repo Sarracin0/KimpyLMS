@@ -50,6 +50,9 @@ type GenerationSettings = {
   axisCount: number
   iterationGoal: string
   peerVisibility: 'private' | 'team' | 'company'
+  contextLabel: string
+  audience: string
+  mustInclude: string
   notes?: string
 }
 
@@ -71,6 +74,9 @@ const DEFAULT_SETTINGS: GenerationSettings = {
   axisCount: 3,
   iterationGoal: '',
   peerVisibility: 'team',
+  contextLabel: '',
+  audience: '',
+  mustInclude: '',
   notes: '',
 }
 
@@ -108,6 +114,13 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
   const scenarioPreviewHref = `/courses/${courseId}/scenarios/${block.id}`
   const arenaSummary = block.gamification?.arenaSummary ?? null
   const arenaPreviewHref = `/courses/${courseId}/arenas/${block.id}`
+  const arenaConfig =
+    block.gamification?.config && typeof block.gamification.config === 'object'
+      ? (block.gamification.config as Record<string, unknown>)
+      : null
+  const arenaContextLabel = arenaConfig ? ensureString(arenaConfig['contextLabel']) : ''
+  const arenaAudience = arenaConfig ? ensureString(arenaConfig['audience']) : ''
+  const arenaMustInclude = arenaConfig ? ensureString(arenaConfig['mustInclude']) : ''
 
   const loadDocuments = useCallback(async () => {
     try {
@@ -417,6 +430,25 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
     if (contentType === 'ARENA') {
       return (
         <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-1 md:col-span-2">
+            <Label htmlFor="arena-context-label">Contesto prioritario</Label>
+            <Input
+              id="arena-context-label"
+              placeholder="Es. Sprint di project management, onboarding retail, sicurezza in cantiere"
+              value={settings.contextLabel}
+              onChange={(event) => handleSettingChange('contextLabel', event.target.value)}
+            />
+            <p className="text-[11px] text-muted-foreground">Titolo breve che indica l&apos;area di applicazione. Verrà usato dall&apos;AI per incorniciare scenario e brief.</p>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="arena-audience">Pubblico target</Label>
+            <Input
+              id="arena-audience"
+              placeholder="Es. Junior PM, Responsabili sicurezza, Team retail store"
+              value={settings.audience}
+              onChange={(event) => handleSettingChange('audience', event.target.value)}
+            />
+          </div>
           <div className="space-y-1">
             <Label htmlFor="axis-count">Evaluation axes</Label>
             <Input
@@ -427,7 +459,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               value={settings.axisCount}
               onChange={(event) => handleSettingChange('axisCount', Number(event.target.value) || DEFAULT_SETTINGS.axisCount)}
             />
-            <p className="text-[11px] text-muted-foreground">Suggerito: 3 assi soft-skill per evidenziare comportamento.</p>
+            <p className="text-[11px] text-muted-foreground">Suggerito: 3 assi per mantenere la valutazione chiara.</p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="peer-visibility">Peer endorsement</Label>
@@ -458,12 +490,22 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             />
           </div>
           <div className="space-y-1 md:col-span-2">
-            <Label htmlFor="arena-competency">Soft skill primaria</Label>
+            <Label htmlFor="arena-competency">Soft skill o competenza chiave</Label>
             <Input
               id="arena-competency"
-              placeholder="Es. comunicazione, leadership, ownership"
+              placeholder="Es. Comunicazione con il cliente, Risk management, Conformità safety"
               value={settings.focusCompetency}
               onChange={(event) => handleSettingChange('focusCompetency', event.target.value)}
+            />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <Label htmlFor="arena-must-include">Elementi obbligatori nello scenario</Label>
+            <Textarea
+              id="arena-must-include"
+              rows={2}
+              placeholder="Elenca procedure, metriche o vincoli che devono comparire (es. checklist sicurezza, milestone PMI, KPI di progetto)."
+              value={settings.mustInclude}
+              onChange={(event) => handleSettingChange('mustInclude', event.target.value)}
             />
           </div>
         </div>
@@ -844,6 +886,31 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
                 </p>
               </div>
             </div>
+            {(arenaContextLabel || arenaAudience || arenaMustInclude) && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  {arenaContextLabel ? (
+                    <div>
+                      <p className="text-[11px] font-semibold text-foreground">Contesto dichiarato</p>
+                      <p className="text-[11px] text-muted-foreground">{arenaContextLabel}</p>
+                    </div>
+                  ) : null}
+                  {arenaAudience ? (
+                    <div>
+                      <p className="text-[11px] font-semibold text-foreground">Pubblico target</p>
+                      <p className="text-[11px] text-muted-foreground">{arenaAudience}</p>
+                    </div>
+                  ) : null}
+                  {arenaMustInclude ? (
+                    <div>
+                      <p className="text-[11px] font-semibold text-foreground">Vincoli o elementi obbligatori</p>
+                      <p className="text-[11px] text-muted-foreground whitespace-pre-line">{arenaMustInclude}</p>
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            )}
           </div>
         )}
       </CardContent>

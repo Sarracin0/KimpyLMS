@@ -35,6 +35,10 @@ export default async function PracticeArenaPage({
 
   const arena = extractArenaPayload(block.gamification.result ?? null)
   const isReady = Boolean(arena)
+  const arenaConfig =
+    block.gamification.config && typeof block.gamification.config === 'object'
+      ? (block.gamification.config as Record<string, unknown>)
+      : null
 
   const attempts = await db.scenarioAttempt.findMany({
     where: {
@@ -57,7 +61,16 @@ export default async function PracticeArenaPage({
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       {isReady ? (
-        <PracticeArenaPlayer blockId={blockId} arena={arena!} attempts={serializedAttempts} />
+        <PracticeArenaPlayer
+          blockId={blockId}
+          arena={arena!}
+          attempts={serializedAttempts}
+          contextConfig={{
+            contextLabel: typeof arenaConfig?.contextLabel === 'string' ? arenaConfig.contextLabel : undefined,
+            audience: typeof arenaConfig?.audience === 'string' ? arenaConfig.audience : undefined,
+            mustInclude: typeof arenaConfig?.mustInclude === 'string' ? arenaConfig.mustInclude : undefined,
+          }}
+        />
       ) : (
         <div className="rounded-lg border border-border/60 bg-card/80 p-6 text-sm text-muted-foreground">
           La Practice Arena è in fase di generazione. Riprova tra qualche istante oppure rigenera il contenuto dal builder HR.

@@ -42,6 +42,11 @@ type PracticeArenaPlayerProps = {
   blockId: string
   arena: GeneratedArenaPayload
   attempts: ArenaAttempt[]
+  contextConfig?: {
+    contextLabel?: string
+    audience?: string
+    mustInclude?: string
+  }
 }
 
 const extractPlanFromPath = (path: unknown): string => {
@@ -78,7 +83,7 @@ const parseReflections = (value: unknown): ArenaEvaluationReflections | null => 
   }
 }
 
-export function PracticeArenaPlayer({ blockId, arena, attempts }: PracticeArenaPlayerProps) {
+export function PracticeArenaPlayer({ blockId, arena, attempts, contextConfig }: PracticeArenaPlayerProps) {
   const router = useRouter()
   const latestAttempt = attempts[0] ?? null
   const latestEvaluation = parseReflections(latestAttempt?.reflections ?? null)?.evaluation ?? null
@@ -93,6 +98,9 @@ export function PracticeArenaPlayer({ blockId, arena, attempts }: PracticeArenaP
 
   const attemptCount = attempts.length
   const planWordCount = planDraft.trim().split(/\s+/).filter(Boolean).length
+  const contextLabel = typeof contextConfig?.contextLabel === 'string' ? contextConfig.contextLabel.trim() : ''
+  const contextAudience = typeof contextConfig?.audience === 'string' ? contextConfig.audience.trim() : ''
+  const contextMustInclude = typeof contextConfig?.mustInclude === 'string' ? contextConfig.mustInclude.trim() : ''
 
   const handleSubmit = async () => {
     if (planWordCount < MIN_PLAN_WORDS) {
@@ -139,6 +147,8 @@ export function PracticeArenaPlayer({ blockId, arena, attempts }: PracticeArenaP
         <h1 className="text-2xl font-semibold text-foreground">Practice Arena</h1>
         <p className="text-sm text-muted-foreground">{arena.scenarioBrief}</p>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {contextLabel ? <Badge variant="outline">{contextLabel}</Badge> : null}
+          {contextAudience ? <Badge variant="outline">Per {contextAudience}</Badge> : null}
           <Badge variant="outline">{arena.axes.length} assi di valutazione</Badge>
           {arena.estimatedDurationMinutes ? <Badge variant="outline">~{arena.estimatedDurationMinutes} min</Badge> : null}
           <Badge variant="secondary" className="gap-1">
@@ -154,7 +164,7 @@ export function PracticeArenaPlayer({ blockId, arena, attempts }: PracticeArenaP
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <div>
-            <p className="text-xs font-semibold uppercase text-foreground/70">Soft skill focus</p>
+            <p className="text-xs font-semibold uppercase text-foreground/70">Focus principale</p>
             <p className="mt-1 text-sm text-foreground">{arena.challenge}</p>
           </div>
           <Separator />
@@ -175,6 +185,11 @@ export function PracticeArenaPlayer({ blockId, arena, attempts }: PracticeArenaP
               <p className="mt-2 text-sm text-foreground">{arena.expectedSections.join(' · ')}</p>
               {arena.aiCoachTips.length > 0 ? (
                 <p className="mt-3 text-xs">Suggerimenti HR: {arena.aiCoachTips.join(' · ')}</p>
+              ) : null}
+              {contextMustInclude ? (
+                <p className="mt-3 text-xs">
+                  Elementi obbligatori: <span className="font-semibold text-foreground/90">{contextMustInclude}</span>
+                </p>
               ) : null}
             </div>
           </div>

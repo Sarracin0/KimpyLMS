@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator'
 import { UserRole } from '@prisma/client'
 import { extractArenaPayload } from '@/lib/gamification/arena'
 import { ArenaEndorseButton } from './_components/arena-endorse-button'
+import { GamificationClient } from './_components/gamification-client'
 
 const DEFAULT_ENDORSEMENT_BONUS = 5
 

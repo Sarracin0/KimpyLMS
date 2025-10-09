@@ -389,10 +389,22 @@ function buildSettingsContext(input: GamificationGenerationInput) {
       lines.push(`Profilo di rischio desiderato: ${risk}`)
     }
   } else {
+    const contextLabel = getString(rawSettings.contextLabel, '')
+    if (contextLabel) {
+      lines.push(`Contesto dichiarato: ${contextLabel}`)
+    }
+    const audience = getString(rawSettings.audience, '')
+    if (audience) {
+      lines.push(`Pubblico target: ${audience}`)
+    }
+    const mustInclude = getString(rawSettings.mustInclude, '')
+    if (mustInclude) {
+      lines.push(`Elementi obbligatori da citare nello scenario: ${mustInclude}`)
+    }
     lines.push(`Numero di assi di valutazione desiderato: ${getNumber(rawSettings.axisCount, 3)}`)
     const softSkill = getString(rawSettings.focusCompetency, '')
     if (softSkill) {
-      lines.push(`Soft skill da evidenziare: ${softSkill}`)
+      lines.push(`Competenza/abilità da mettere in evidenza: ${softSkill}`)
     }
     const iterationFocus = getString(rawSettings.iterationGoal, '')
     if (iterationFocus) {
@@ -499,7 +511,7 @@ export async function generateGamificationContent(
         ? 'Genera un mazzo di flashcard seguendo lo schema JSON della funzione create_flashcard_deck. Ogni carta deve essere fondata sui materiali.'
         : input.contentType === GamificationContentType.SCENARIO
           ? 'Genera un laboratorio decisionale ramificato seguendo lo schema JSON della funzione create_scenario_lab. Mantieni 4-6 nodi con feedback specifico, punteggio e analisi del rischio per HR.'
-          : 'Genera una Practice Arena seguendo lo schema JSON della funzione create_practice_arena. Fornisci un briefing realistico, rubriche soft-skill e prompt per iterazione e peer endorsement.'
+          : 'Genera una Practice Arena seguendo lo schema JSON della funzione create_practice_arena. Fornisci un briefing realistico, rubriche di valutazione coerenti e prompt per iterazione e peer endorsement, rispettando contesto, pubblico e vincoli indicati.'
 
   const response = await client.responses.create({
     model,
