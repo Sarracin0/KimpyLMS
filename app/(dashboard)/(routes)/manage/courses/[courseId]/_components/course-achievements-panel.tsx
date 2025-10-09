@@ -35,6 +35,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 
 type AchievementTemplate = {
   id: string
@@ -320,6 +321,35 @@ const iconToComponent = (iconKey?: string | null) => {
   }
 }
 
+const formatUnlockTypeLabel = (unlockType: CourseAchievement['unlockType']) =>
+  unlockType
+    .split('_')
+    .map((segment) => segment.charAt(0) + segment.slice(1).toLowerCase())
+    .join(' ')
+
+const WIZARD_STEPS = [
+  {
+    key: 'template',
+    title: 'Tipo',
+    description: 'Scegli come si sblocca il badge.',
+  },
+  {
+    key: 'identity',
+    title: 'Identità',
+    description: 'Icona e titolo in stile notebook.',
+  },
+  {
+    key: 'details',
+    title: 'Dettagli',
+    description: 'Descrizione e collegamenti al corso.',
+  },
+  {
+    key: 'reward',
+    title: 'Ricompensa',
+    description: 'Punti e condizioni di sblocco.',
+  },
+]
+
 function EnableLeaderboardToggle({ courseId }: { courseId: string }) {
   // Inline client component that fetches and toggles the course flag via PATCH
   const [enabled, setEnabled] = useState<boolean | null>(null)
@@ -374,6 +404,7 @@ export const CourseAchievementsPanel = ({
   onAchievementsChange,
 }: CourseAchievementsPanelProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [currentStep, setCurrentStep] = useState(0)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(ACHIEVEMENT_TEMPLATES[0].id)
   const [formState, setFormState] = useState<AchievementFormState>(() => ({
     title: ACHIEVEMENT_TEMPLATES[0].name,
@@ -393,6 +424,10 @@ export const CourseAchievementsPanel = ({
   }))
   const [isSaving, setIsSaving] = useState(false)
   const [busyAchievementId, setBusyAchievementId] = useState<string | null>(null)
+  const totalSteps = WIZARD_STEPS.length
+  const isLastStep = currentStep === totalSteps - 1
+  const titleInputId = 'achievement-title'
+  const descriptionInputId = 'achievement-description'
 
   const sortedAchievements = useMemo(
     () =>
@@ -629,6 +664,7 @@ export const CourseAchievementsPanel = ({
     const defaultTemplate = ACHIEVEMENT_TEMPLATES[0]
     setSelectedTemplateId(defaultTemplate.id)
     setFormState(buildDefaultState(defaultTemplate))
+    setCurrentStep(0)
   }
 
   const handleOpenChange = (open: boolean) => {
@@ -636,6 +672,7 @@ export const CourseAchievementsPanel = ({
     if (!open) {
       resetDialogState()
     } else {
+      setCurrentStep(0)
       const template = ACHIEVEMENT_TEMPLATES.find((item) => item.id === selectedTemplateId) ?? ACHIEVEMENT_TEMPLATES[0]
       setFormState(buildDefaultState(template))
     }
@@ -647,6 +684,37 @@ export const CourseAchievementsPanel = ({
 
     setSelectedTemplateId(template.id)
     setFormState(buildDefaultState(template))
+    setCurrentStep(0)
+  }
+
+  const stepIsValid = (step: number) => {
+    switch (step) {
+      case 0:
+        return Boolean(selectedTemplate)
+      case 1:
+        return Boolean(formState.icon) && Boolean(formState.title.trim())
+      case 2:
+        if (selectedTemplate.requiresModule && !formState.targetModuleId) return false
+        if (selectedTemplate.requiresLesson && !formState.targetLessonId) return false
+        if (selectedTemplate.requiresQuiz && !formState.selectedQuizId) return false
+        if (selectedTemplate.requiresDeck && !formState.selectedDeckId) return false
+        if (selectedTemplate.requiresScenario && !formState.selectedScenarioId) return false
+        if (selectedTemplate.requiresArena && !formState.selectedArenaId) return false
+        return true
+      default:
+        return true
+    }
+  }
+
+  const canContinue = stepIsValid(currentStep)
+
+  const handleGoNext = () => {
+    if (isLastStep || !canContinue || isSaving) return
+    setCurrentStep((step) => Math.min(step + 1, totalSteps - 1))
+  }
+
+  const handleGoBack = () => {
+    setCurrentStep((step) => Math.max(step - 1, 0))
   }
 
   const creationDisabled =
@@ -843,6 +911,630 @@ export const CourseAchievementsPanel = ({
     }
   }
 
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0: {
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Seleziona il tipo di obiettivo più adatto. Potrai rifinire la proposta nei passaggi successivi.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {ACHIEVEMENT_TEMPLATES.map((template) => {
+                const Icon = iconToComponent(template.icon)
+                const isActive = template.id === selectedTemplateId
+                return (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() => handleTemplateSelect(template.id)}
+                    className={cn(
+                      'group relative flex h-full flex-col justify-between rounded-2xl border border-border/60 bg-card/80 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0',
+                      isActive && 'border-primary bg-primary text-primary-foreground shadow-lg hover:shadow-lg',
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={cn(
+                          'flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors',
+                          isActive && 'bg-primary-foreground/20 text-primary-foreground',
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <div className="space-y-1">
+                        <p
+                          className={cn(
+                            'break-words text-sm font-semibold leading-tight',
+                            isActive ? 'text-primary-foreground' : 'text-foreground',
+                          )}
+                        >
+                          {template.name}
+                        </p>
+                        <p
+                          className={cn(
+                            'break-words text-xs leading-snug text-muted-foreground/90',
+                            isActive && 'text-primary-foreground/80',
+                          )}
+                        >
+                          {template.description}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={cn(
+                        'mt-4 inline-flex items-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80',
+                        isActive && 'text-primary-foreground/80',
+                      )}
+                    >
+                      {formatUnlockTypeLabel(template.unlockType)}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      }
+      case 1: {
+        const SelectedIcon = iconToComponent(formState.icon)
+        return (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Icona</Label>
+              <div className="flex flex-wrap gap-3">
+                {ICON_OPTIONS.map((iconOption) => {
+                  const Icon = iconOption.icon
+                  const isActive = formState.icon === iconOption.value
+                  return (
+                    <button
+                      key={iconOption.value}
+                      type="button"
+                      onClick={() => setFormState((state) => ({ ...state, icon: iconOption.value }))}
+                      className={cn(
+                        'flex h-12 w-12 items-center justify-center rounded-xl border border-border/60 bg-card/80 text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                        isActive && 'border-primary bg-primary text-primary-foreground shadow-sm hover:text-primary-foreground',
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={titleInputId} className="text-xs uppercase tracking-wide text-muted-foreground">
+                Titolo
+              </Label>
+              <div className="rounded-3xl border border-border/50 bg-background/80 px-5 py-4 transition-all focus-within:border-primary focus-within:shadow-sm">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border/60 bg-card text-muted-foreground">
+                    <SelectedIcon className="h-6 w-6" />
+                  </span>
+                  <Input
+                    id={titleInputId}
+                    value={formState.title}
+                    onChange={(event) =>
+                      setFormState((state) => ({ ...state, title: event.target.value }))
+                    }
+                    placeholder="Es. Campione del kickoff"
+                    className="h-auto border-none bg-transparent p-0 text-xl font-semibold tracking-tight text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Mantieni un nome breve: racconta subito cosa celebra questo badge.
+                </p>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      case 2:
+        return (
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor={descriptionInputId} className="text-xs uppercase tracking-wide text-muted-foreground">
+                Descrizione
+              </Label>
+              <div className="rounded-3xl border border-border/50 bg-background/80 px-5 py-4 transition-all focus-within:border-primary focus-within:shadow-sm">
+                <Textarea
+                  id={descriptionInputId}
+                  value={formState.description}
+                  onChange={(event) =>
+                    setFormState((state) => ({ ...state, description: event.target.value }))
+                  }
+                  placeholder="Dai un contesto ai learner su come sbloccare il badge."
+                  className="min-h-[110px] resize-none border-none bg-transparent p-0 text-sm leading-relaxed text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+            </div>
+            {selectedTemplate.requiresModule ? (
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Modulo di riferimento
+                </Label>
+                <div className="rounded-3xl border border-border/50 bg-background/80 px-5 py-4">
+                  <Select
+                    value={formState.targetModuleId ?? ''}
+                    onValueChange={(value) =>
+                      setFormState((state) => ({ ...state, targetModuleId: value || null }))
+                    }
+                    disabled={moduleOptions.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona un modulo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {moduleOptions.map((module) => (
+                        <SelectItem key={module.id} value={module.id}>
+                          {module.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {moduleOptions.length === 0 ? (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Crea prima almeno un modulo pubblicato per utilizzare questo template.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {selectedTemplate.requiresLesson ? (
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Lezione di riferimento
+                </Label>
+                <div className="rounded-3xl border border-border/50 bg-background/80 px-5 py-4">
+                  <Select
+                    value={formState.targetLessonId ?? ''}
+                    onValueChange={(value) => {
+                      const lesson = lessonOptions.find((item) => item.id === value)
+                      setFormState((state) => ({
+                        ...state,
+                        targetLessonId: value || null,
+                        targetModuleId: lesson ? lesson.moduleId : state.targetModuleId,
+                      }))
+                    }}
+                    disabled={lessonOptions.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona una lezione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lessonOptions.map((lesson) => (
+                        <SelectItem key={lesson.id} value={lesson.id}>
+                          {lesson.title} · {lesson.moduleTitle}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {lessonOptions.length === 0 ? (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Aggiungi prima almeno una lezione per questo corso.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {selectedTemplate.requiresQuiz ? (
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Quiz
+                </Label>
+                <div className="rounded-3xl border border-border/50 bg-background/80 px-5 py-4">
+                  <Select
+                    value={formState.selectedQuizId ?? ''}
+                    onValueChange={(value) => {
+                      const quiz = quizOptions.find((item) => item.id === value)
+                      setFormState((state) => ({
+                        ...state,
+                        selectedQuizId: value || null,
+                        targetLessonId: quiz ? quiz.lessonId : state.targetLessonId,
+                        targetModuleId: quiz ? quiz.moduleId : state.targetModuleId,
+                      }))
+                    }}
+                    disabled={quizOptions.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona un quiz" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {quizOptions.map((quiz) => (
+                        <SelectItem key={quiz.id} value={quiz.id}>
+                          {quiz.title} · {quiz.lessonTitle}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {quizOptions.length === 0 ? (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Crea o pubblica un quiz per attivare questo template.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {selectedTemplate.requiresDeck ? (
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Deck di flashcard
+                </Label>
+                <div className="rounded-3xl border border-border/50 bg-background/80 px-5 py-4">
+                  <Select
+                    value={formState.selectedDeckId ?? ''}
+                    onValueChange={(value) => {
+                      const deck = flashcardOptions.find((item) => item.deckId === value)
+                      setFormState((state) => ({
+                        ...state,
+                        selectedDeckId: value || null,
+                        targetLessonId: deck ? deck.lessonId : state.targetLessonId,
+                        targetModuleId: deck ? deck.moduleId : state.targetModuleId,
+                      }))
+                    }}
+                    disabled={flashcardOptions.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona un deck" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {flashcardOptions.map((deck) => (
+                        <SelectItem key={deck.deckId} value={deck.deckId}>
+                          {deck.title} · {deck.lessonTitle}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {flashcardOptions.length === 0 ? (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Genera o pubblica un deck di flashcard per usare questo template.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {selectedTemplate.requiresScenario ? (
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Decision Lab
+                </Label>
+                <div className="rounded-3xl border border-border/50 bg-background/80 px-5 py-4">
+                  <Select
+                    value={formState.selectedScenarioId ?? ''}
+                    onValueChange={(value) => {
+                      const scenario = scenarioOptions.find((item) => item.gamificationId === value)
+                      setFormState((state) => ({
+                        ...state,
+                        selectedScenarioId: value || null,
+                        targetLessonId: scenario ? scenario.lessonId : state.targetLessonId,
+                        targetModuleId: scenario ? scenario.moduleId : state.targetModuleId,
+                      }))
+                    }}
+                    disabled={scenarioOptions.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona un Decision Lab" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {scenarioOptions.map((scenario) => (
+                        <SelectItem key={scenario.gamificationId} value={scenario.gamificationId}>
+                          {scenario.title} · {scenario.lessonTitle}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {scenarioOptions.length === 0 ? (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Genera un Decision Lab dal builder per usare questo template.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {selectedTemplate.requiresArena ? (
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Practice Arena
+                </Label>
+                <div className="rounded-3xl border border-border/50 bg-background/80 px-5 py-4">
+                  <Select
+                    value={formState.selectedArenaId ?? ''}
+                    onValueChange={(value) => {
+                      const arena = arenaOptions.find((item) => item.gamificationId === value)
+                      setFormState((state) => ({
+                        ...state,
+                        selectedArenaId: value || null,
+                        targetLessonId: arena ? arena.lessonId : state.targetLessonId,
+                        targetModuleId: arena ? arena.moduleId : state.targetModuleId,
+                      }))
+                    }}
+                    disabled={arenaOptions.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona una Practice Arena" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {arenaOptions.map((arena) => (
+                        <SelectItem key={arena.gamificationId} value={arena.gamificationId}>
+                          {arena.title} · {arena.lessonTitle}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {arenaOptions.length === 0 ? (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Genera o pubblica una Practice Arena per usare questo template.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )
+      case 3:
+      default: {
+        const PreviewIcon = iconToComponent(formState.icon)
+        return (
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Punti assegnati
+                </Label>
+                <div className="rounded-3xl border border-border/50 bg-background/80 px-5 py-4">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formState.pointsReward}
+                    onChange={(event) =>
+                      setFormState((state) => ({
+                        ...state,
+                        pointsReward: Number(event.target.value) || 0,
+                      }))
+                    }
+                    className="h-12 rounded-2xl border border-border/60 bg-card text-lg font-semibold focus-visible:ring-2 focus-visible:ring-primary/40"
+                  />
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Premi generosi danno peso ai progressi davvero importanti.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Anteprima
+                </Label>
+                <div className="flex h-full items-center gap-3 rounded-3xl border border-border/50 bg-card/80 px-5 py-4">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <PreviewIcon className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {formState.title || 'Titolo obiettivo'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">+{formState.pointsReward} punti</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {formState.unlockType === 'COURSE_POINTS' ? (
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Soglia punti corso
+                </Label>
+                <div className="rounded-3xl border border-border/50 bg-background/80 px-5 py-4">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={formState.pointsThreshold ?? ''}
+                    placeholder="Es. 300"
+                    onChange={(event) => {
+                      const raw = event.target.value
+                      const numeric = Number(raw)
+                      setFormState((state) => ({
+                        ...state,
+                        pointsThreshold:
+                          raw === '' || Number.isNaN(numeric)
+                            ? null
+                            : Math.max(1, Math.trunc(numeric)),
+                      }))
+                    }}
+                    className="h-12 rounded-2xl border border-border/60 bg-card text-base focus-visible:ring-2 focus-visible:ring-primary/40"
+                  />
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Il learner sblocca l’obiettivo quando accumula almeno questo numero di punti nel corso.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+            {formState.unlockType === 'QUIZ_SCORE' ? (
+              <div className="space-y-4 rounded-3xl border border-border/50 bg-background/80 px-5 py-4">
+                <div className="flex flex-wrap items-center gap-3 text-sm text-foreground">
+                  <Checkbox
+                    id="achievement-quiz-pass"
+                    checked={formState.quizRequirePass}
+                    onCheckedChange={(checked) =>
+                      setFormState((state) => ({
+                        ...state,
+                        quizRequirePass: Boolean(checked),
+                      }))
+                    }
+                  />
+                  <Label htmlFor="achievement-quiz-pass" className="leading-none">
+                    Richiedi quiz superato
+                  </Label>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Punteggio minimo (facoltativo)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={formState.quizMinScore ?? ''}
+                      placeholder="Es. 80"
+                      onChange={(event) => {
+                        const raw = event.target.value
+                        const numeric = Number(raw)
+                        setFormState((state) => ({
+                          ...state,
+                          quizMinScore:
+                            raw === '' || Number.isNaN(numeric) ? null : Math.max(0, numeric),
+                        }))
+                      }}
+                      className="h-11 rounded-2xl border border-border/60 bg-card focus-visible:ring-2 focus-visible:ring-primary/40"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Lascia vuoto per usare solo la regola di superamento del quiz.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            {formState.unlockType === 'SCENARIO_PERFORMANCE' ? (
+              <div className="space-y-4 rounded-3xl border border-border/50 bg-background/80 px-5 py-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Decision Lab · requisiti
+                </p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Punteggio minimo
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={formState.scenarioMinScore ?? ''}
+                      placeholder="Es. 200"
+                      onChange={(event) => {
+                        const raw = event.target.value
+                        const numeric = Number(raw)
+                        setFormState((state) => ({
+                          ...state,
+                          scenarioMinScore:
+                            raw === '' || Number.isNaN(numeric) ? null : Math.max(0, numeric),
+                        }))
+                      }}
+                      className="h-11 rounded-2xl border border-border/60 bg-card focus-visible:ring-2 focus-visible:ring-primary/40"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Rischio massimo (%)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={formState.scenarioMaxRisk ?? ''}
+                      placeholder="Es. 40"
+                      onChange={(event) => {
+                        const raw = event.target.value
+                        const numeric = Number(raw)
+                        setFormState((state) => ({
+                          ...state,
+                          scenarioMaxRisk:
+                            raw === '' || Number.isNaN(numeric)
+                              ? null
+                              : Math.max(0, Math.min(100, numeric)),
+                        }))
+                      }}
+                      className="h-11 rounded-2xl border border-border/60 bg-card focus-visible:ring-2 focus-visible:ring-primary/40"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Imposta 0-100 per limitare scelte ad alto rischio.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            {formState.unlockType === 'ARENA_PERFORMANCE' ? (
+              <div className="space-y-4 rounded-3xl border border-border/50 bg-background/80 px-5 py-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Practice Arena · requisiti
+                </p>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Punteggio minimo
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={formState.arenaMinScore ?? ''}
+                      placeholder="Es. 75"
+                      onChange={(event) => {
+                        const raw = event.target.value
+                        const numeric = Number(raw)
+                        setFormState((state) => ({
+                          ...state,
+                          arenaMinScore:
+                            raw === '' || Number.isNaN(numeric)
+                              ? null
+                              : Math.max(0, Math.min(100, numeric)),
+                        }))
+                      }}
+                      className="h-11 rounded-2xl border border-border/60 bg-card focus-visible:ring-2 focus-visible:ring-primary/40"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Insight Tokens minimi
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={formState.arenaMinTokens ?? ''}
+                      placeholder="Es. 40"
+                      onChange={(event) => {
+                        const raw = event.target.value
+                        const numeric = Number(raw)
+                        setFormState((state) => ({
+                          ...state,
+                          arenaMinTokens:
+                            raw === '' || Number.isNaN(numeric) ? null : Math.max(0, numeric),
+                        }))
+                      }}
+                      className="h-11 rounded-2xl border border-border/60 bg-card focus-visible:ring-2 focus-visible:ring-primary/40"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Endorsement minimi
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={formState.arenaMinEndorsements ?? ''}
+                      placeholder="Es. 1"
+                      onChange={(event) => {
+                        const raw = event.target.value
+                        const numeric = Number(raw)
+                        setFormState((state) => ({
+                          ...state,
+                          arenaMinEndorsements:
+                            raw === '' || Number.isNaN(numeric)
+                              ? null
+                              : Math.max(0, Math.trunc(numeric)),
+                        }))
+                      }}
+                      className="h-11 rounded-2xl border border-border/60 bg-card focus-visible:ring-2 focus-visible:ring-primary/40"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Lascia vuoto per non richiedere endorsement HR.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )
+      }
+    }
+  }
+
   const handleDeleteAchievement = async (achievement: CourseAchievement) => {
     const shouldDelete = window.confirm(`Vuoi eliminare l’obiettivo “${achievement.title}”?`)
     if (!shouldDelete) return
@@ -876,472 +1568,77 @@ export const CourseAchievementsPanel = ({
               <Plus className="mr-2 h-4 w-4" />
               Nuovo obiettivo
             </Button>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Configura obiettivo</DialogTitle>
-                <DialogDescription>Scegli un template e personalizza titolo, moduli e punti assegnati.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-6 py-2">
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase text-muted-foreground">Template</Label>
-                  <div className="grid gap-2 md:grid-cols-3">
-                    {ACHIEVEMENT_TEMPLATES.map((template) => (
-                      <Button
-                        key={template.id}
-                        type="button"
-                        variant={selectedTemplateId === template.id ? 'default' : 'outline'}
-                        className="h-auto flex-col items-start gap-1 px-3 py-3 text-left"
-                        onClick={() => handleTemplateSelect(template.id)}
-                      >
-                        <span className="text-sm font-semibold">{template.name}</span>
-                        <span className="text-xs text-muted-foreground">{template.description}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+            <DialogContent className="max-w-[90vw] sm:max-w-3xl lg:max-w-4xl overflow-hidden rounded-3xl border border-border/40 bg-background/95 p-0 shadow-2xl backdrop-blur">
+              <div className="space-y-6 p-6">
+                <DialogHeader className="space-y-1.5">
+                  <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+                    Configura obiettivo
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    Costruisci il badge passo dopo passo per mantenerlo chiaro e memorabile.
+                  </DialogDescription>
+                </DialogHeader>
 
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label>Titolo</Label>
-                    <Input
-                      value={formState.title}
-                      onChange={(event) =>
-                        setFormState((state) => ({ ...state, title: event.target.value }))
-                      }
-                      placeholder="Es. Campione del kickoff"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Descrizione</Label>
-                    <Textarea
-                      value={formState.description}
-                      onChange={(event) =>
-                        setFormState((state) => ({ ...state, description: event.target.value }))
-                      }
-                      rows={3}
-                      placeholder="Dai un contesto ai learner su come sbloccare il badge."
-                    />
-                  </div>
-
-                  {selectedTemplate.requiresModule ? (
-                    <div className="space-y-2">
-                      <Label>Modulo di riferimento</Label>
-                      <Select
-                        value={formState.targetModuleId ?? ''}
-                        onValueChange={(value) =>
-                          setFormState((state) => ({ ...state, targetModuleId: value || null }))
-                        }
-                        disabled={moduleOptions.length === 0}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona un modulo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {moduleOptions.map((module) => (
-                            <SelectItem key={module.id} value={module.id}>
-                              {module.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {moduleOptions.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                          Crea prima almeno un modulo pubblicato per utilizzare questo template.
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {selectedTemplate.requiresLesson ? (
-                    <div className="space-y-2">
-                      <Label>Lezione di riferimento</Label>
-                      <Select
-                        value={formState.targetLessonId ?? ''}
-                        onValueChange={(value) => {
-                          const lesson = lessonOptions.find((item) => item.id === value)
-                          setFormState((state) => ({
-                            ...state,
-                            targetLessonId: value || null,
-                            targetModuleId: lesson ? lesson.moduleId : state.targetModuleId,
-                          }))
-                        }}
-                        disabled={lessonOptions.length === 0}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona una lezione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {lessonOptions.map((lesson) => (
-                            <SelectItem key={lesson.id} value={lesson.id}>
-                              {lesson.title} · {lesson.moduleTitle}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {lessonOptions.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                          Aggiungi prima almeno una lezione per questo corso.
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {selectedTemplate.requiresQuiz ? (
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label>Quiz</Label>
-                        <Select
-                          value={formState.selectedQuizId ?? ''}
-                          onValueChange={(value) => {
-                            const quiz = quizOptions.find((item) => item.id === value)
-                            setFormState((state) => ({
-                              ...state,
-                              selectedQuizId: value || null,
-                              targetLessonId: quiz ? quiz.lessonId : state.targetLessonId,
-                              targetModuleId: quiz ? quiz.moduleId : state.targetModuleId,
-                            }))
-                          }}
-                          disabled={quizOptions.length === 0}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona un quiz" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {quizOptions.map((quiz) => (
-                              <SelectItem key={quiz.id} value={quiz.id}>
-                                {quiz.title} · {quiz.lessonTitle}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {quizOptions.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">
-                            Crea o pubblica un quiz per attivare questo template.
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                          id="achievement-quiz-pass"
-                          checked={formState.quizRequirePass}
-                          onCheckedChange={(checked) =>
-                            setFormState((state) => ({
-                              ...state,
-                              quizRequirePass: Boolean(checked),
-                            }))
-                          }
-                        />
-                        <Label htmlFor="achievement-quiz-pass" className="leading-none">
-                          Richiedi quiz superato
-                        </Label>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Punteggio minimo (facoltativo)</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={formState.quizMinScore ?? ''}
-                          placeholder="Es. 80"
-                          onChange={(event) => {
-                            const raw = event.target.value
-                            const numeric = Number(raw)
-                            setFormState((state) => ({
-                              ...state,
-                              quizMinScore: raw === '' || Number.isNaN(numeric) ? null : Math.max(0, numeric),
-                            }))
-                          }}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Lascia vuoto per usare solo la regola di superamento del quiz.
-                        </p>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {selectedTemplate.requiresDeck ? (
-                    <div className="space-y-2">
-                      <Label>Deck di flashcard</Label>
-                      <Select
-                        value={formState.selectedDeckId ?? ''}
-                        onValueChange={(value) => {
-                          const deck = flashcardOptions.find((item) => item.deckId === value)
-                          setFormState((state) => ({
-                            ...state,
-                            selectedDeckId: value || null,
-                            targetLessonId: deck ? deck.lessonId : state.targetLessonId,
-                            targetModuleId: deck ? deck.moduleId : state.targetModuleId,
-                          }))
-                        }}
-                        disabled={flashcardOptions.length === 0}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona un deck" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {flashcardOptions.map((deck) => (
-                            <SelectItem key={deck.deckId} value={deck.deckId}>
-                              {deck.title} · {deck.lessonTitle}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {flashcardOptions.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                          Genera o pubblica un deck di flashcard per usare questo template.
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {selectedTemplate.requiresScenario ? (
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label>Decision Lab</Label>
-                        <Select
-                          value={formState.selectedScenarioId ?? ''}
-                          onValueChange={(value) => {
-                            const scenario = scenarioOptions.find((item) => item.gamificationId === value)
-                            setFormState((state) => ({
-                              ...state,
-                              selectedScenarioId: value || null,
-                              targetLessonId: scenario ? scenario.lessonId : state.targetLessonId,
-                              targetModuleId: scenario ? scenario.moduleId : state.targetModuleId,
-                            }))
-                          }}
-                          disabled={scenarioOptions.length === 0}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona un Decision Lab" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {scenarioOptions.map((scenario) => (
-                              <SelectItem key={scenario.gamificationId} value={scenario.gamificationId}>
-                                {scenario.title} · {scenario.lessonTitle}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {scenarioOptions.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">
-                            Genera un Decision Lab dal builder per usare questo template.
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Punteggio minimo</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={formState.scenarioMinScore ?? ''}
-                            placeholder="Es. 200"
-                            onChange={(event) => {
-                              const raw = event.target.value
-                              const numeric = Number(raw)
-                              setFormState((state) => ({
-                                ...state,
-                                scenarioMinScore: raw === '' || Number.isNaN(numeric) ? null : Math.max(0, numeric),
-                              }))
-                            }}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Rischio massimo (%)</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={formState.scenarioMaxRisk ?? ''}
-                            placeholder="Es. 40"
-                            onChange={(event) => {
-                              const raw = event.target.value
-                              const numeric = Number(raw)
-                              setFormState((state) => ({
-                                ...state,
-                                scenarioMaxRisk:
-                                  raw === '' || Number.isNaN(numeric)
-                                    ? null
-                                    : Math.max(0, Math.min(100, numeric)),
-                              }))
-                            }}
-                          />
-                          <p className="text-xs text-muted-foreground">Imposta 0-100 per limitare scelte ad alto rischio.</p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {selectedTemplate.requiresArena ? (
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label>Practice Arena</Label>
-                        <Select
-                          value={formState.selectedArenaId ?? ''}
-                          onValueChange={(value) => {
-                            const arena = arenaOptions.find((item) => item.gamificationId === value)
-                            setFormState((state) => ({
-                              ...state,
-                              selectedArenaId: value || null,
-                              targetLessonId: arena ? arena.lessonId : state.targetLessonId,
-                              targetModuleId: arena ? arena.moduleId : state.targetModuleId,
-                            }))
-                          }}
-                          disabled={arenaOptions.length === 0}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona una Practice Arena" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {arenaOptions.map((arena) => (
-                              <SelectItem key={arena.gamificationId} value={arena.gamificationId}>
-                                {arena.title} · {arena.lessonTitle}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {arenaOptions.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">
-                            Genera o pubblica una Practice Arena per usare questo template.
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="grid gap-3 md:grid-cols-3">
-                        <div className="space-y-2">
-                          <Label>Punteggio minimo</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={formState.arenaMinScore ?? ''}
-                            placeholder="Es. 75"
-                            onChange={(event) => {
-                              const raw = event.target.value
-                              const numeric = Number(raw)
-                              setFormState((state) => ({
-                                ...state,
-                                arenaMinScore:
-                                  raw === '' || Number.isNaN(numeric)
-                                    ? null
-                                    : Math.max(0, Math.min(100, numeric)),
-                              }))
-                            }}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Insight Tokens minimi</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={formState.arenaMinTokens ?? ''}
-                            placeholder="Es. 40"
-                            onChange={(event) => {
-                              const raw = event.target.value
-                              const numeric = Number(raw)
-                              setFormState((state) => ({
-                                ...state,
-                                arenaMinTokens:
-                                  raw === '' || Number.isNaN(numeric) ? null : Math.max(0, numeric),
-                              }))
-                            }}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Endorsement minimi</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={formState.arenaMinEndorsements ?? ''}
-                            placeholder="Es. 1"
-                            onChange={(event) => {
-                              const raw = event.target.value
-                              const numeric = Number(raw)
-                              setFormState((state) => ({
-                                ...state,
-                                arenaMinEndorsements:
-                                  raw === '' || Number.isNaN(numeric)
-                                    ? null
-                                    : Math.max(0, Math.trunc(numeric)),
-                              }))
-                            }}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Lascia vuoto per non richiedere endorsement HR.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Punti assegnati</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={formState.pointsReward}
-                        onChange={(event) =>
-                          setFormState((state) => ({
-                            ...state,
-                            pointsReward: Number(event.target.value) || 0,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Icona</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {ICON_OPTIONS.map((iconOption) => {
-                          const Icon = iconOption.icon
-                          const isActive = formState.icon === iconOption.value
-                          return (
-                            <Button
-                              key={iconOption.value}
-                              type="button"
-                              variant={isActive ? 'default' : 'outline'}
-                              className="h-9 w-16 justify-center"
-                              onClick={() => setFormState((state) => ({ ...state, icon: iconOption.value }))}
+                <div className="space-y-5">
+                  <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4">
+                    {WIZARD_STEPS.map((step, index) => {
+                      const isActive = index === currentStep
+                      const isCompleted = index < currentStep
+                      return (
+                        <div key={step.key} className="flex min-w-[150px] items-center gap-3">
+                          <span
+                            className={cn(
+                              'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors',
+                              isActive
+                                ? 'bg-primary text-primary-foreground'
+                                : isCompleted
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'bg-background text-muted-foreground',
+                            )}
+                          >
+                            {index + 1}
+                          </span>
+                          <div className="space-y-0.5">
+                            <p
+                              className={cn(
+                                'text-sm font-medium',
+                                isActive ? 'text-foreground' : 'text-muted-foreground',
+                              )}
                             >
-                              <Icon className="h-4 w-4" />
-                            </Button>
-                          )
-                        })}
-                      </div>
-                    </div>
+                              {step.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{step.description}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
 
-                  {formState.unlockType === 'COURSE_POINTS' ? (
-                    <div className="space-y-2">
-                      <Label>Soglia punti corso</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={formState.pointsThreshold ?? ''}
-                        placeholder="Es. 300"
-                        onChange={(event) => {
-                          const raw = event.target.value
-                          const numeric = Number(raw)
-                          setFormState((state) => ({
-                            ...state,
-                            pointsThreshold:
-                              raw === '' || Number.isNaN(numeric) ? null : Math.max(1, Math.trunc(numeric)),
-                          }))
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Il learner sblocca l’obiettivo quando accumula almeno questo numero di punti all’interno del corso.
-                      </p>
-                    </div>
-                  ) : null}
+                  <div className="rounded-3xl border border-border/50 bg-card/70 p-5 shadow-sm">
+                    {renderStepContent()}
+                  </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
+              <DialogFooter className="flex flex-col gap-3 border-t border-border/60 bg-muted/10 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <Button variant="ghost" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
                   Annulla
                 </Button>
-                <Button onClick={handleCreateAchievement} disabled={creationDisabled}>
-          {isSaving ? 'Salvataggio…' : 'Crea obiettivo'}
-                </Button>
+                <div className="flex items-center gap-2">
+                  {currentStep > 0 ? (
+                    <Button variant="outline" onClick={handleGoBack} disabled={isSaving}>
+                      Indietro
+                    </Button>
+                  ) : null}
+                  {!isLastStep ? (
+                    <Button onClick={handleGoNext} disabled={!canContinue || isSaving}>
+                      Continua
+                    </Button>
+                  ) : (
+                    <Button onClick={handleCreateAchievement} disabled={creationDisabled}>
+                      {isSaving ? 'Salvataggio…' : 'Crea obiettivo'}
+                    </Button>
+                  )}
+                </div>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -1371,10 +1668,12 @@ export const CourseAchievementsPanel = ({
                         <Icon className="h-5 w-5" />
                       </span>
                       <div>
-                        <CardTitle className="text-base font-semibold text-foreground">
+                        <CardTitle className="break-words text-base font-semibold text-foreground">
                           {achievement.title}
                         </CardTitle>
-                        <CardDescription>{describeUnlock(achievement)}</CardDescription>
+                        <CardDescription className="break-words">
+                          {describeUnlock(achievement)}
+                        </CardDescription>
                       </div>
                     </div>
                     <Badge variant={achievement.isActive ? 'default' : 'secondary'} className="uppercase text-[10px]">
@@ -1384,9 +1683,9 @@ export const CourseAchievementsPanel = ({
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col justify-between gap-4">
                   <div className="space-y-3 text-sm text-muted-foreground">
-                    {achievement.description ? <p>{achievement.description}</p> : null}
+                    {achievement.description ? <p className="break-words">{achievement.description}</p> : null}
                     {achievement.targetLesson?.title ? (
-                      <p className="text-xs">Lezione: {achievement.targetLesson.title}</p>
+                      <p className="break-words text-xs">Lezione: {achievement.targetLesson.title}</p>
                     ) : null}
                     <p className="text-xs font-medium text-foreground">
                       +{achievement.pointsReward} punti

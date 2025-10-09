@@ -128,20 +128,26 @@ export async function getAnalytics(companyId: string): Promise<AnalyticsResponse
     timelineCoachMessages,
   ] = await Promise.all([
     db.userProfile.count({ where: { companyId, role: UserRole.LEARNER } }),
-    db.userLessonProgress.count({
-      where: {
-        lesson: { module: { course: { companyId } } },
-        updatedAt: { gte: periodStart },
-      },
-      distinct: ['userProfileId'],
-    }),
-    db.userLessonProgress.count({
-      where: {
-        lesson: { module: { course: { companyId } } },
-        updatedAt: { gte: previousPeriodStart, lt: periodStart },
-      },
-      distinct: ['userProfileId'],
-    }),
+    db.userLessonProgress
+      .findMany({
+        where: {
+          lesson: { module: { course: { companyId } } },
+          updatedAt: { gte: periodStart },
+        },
+        select: { userProfileId: true },
+        distinct: ['userProfileId'],
+      })
+      .then((rows) => rows.length),
+    db.userLessonProgress
+      .findMany({
+        where: {
+          lesson: { module: { course: { companyId } } },
+          updatedAt: { gte: previousPeriodStart, lt: periodStart },
+        },
+        select: { userProfileId: true },
+        distinct: ['userProfileId'],
+      })
+      .then((rows) => rows.length),
     db.courseEnrollment.count({
       where: {
         course: { companyId },
@@ -226,7 +232,6 @@ export async function getAnalytics(companyId: string): Promise<AnalyticsResponse
             lesson: {
               module: {
                 course: { companyId },
-                courseId: true,
               },
             },
           },

@@ -30,10 +30,10 @@ export default async function ManageTeamsPage() {
 
   return (
     <div className="space-y-6 p-6 md:space-y-8 md:p-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">Team management</h1>
+      <div className="rounded-xl border border-primary/10 bg-primary/5 p-6">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">Gestione team</h1>
         <p className="mt-1 text-sm text-muted-foreground md:text-base">
-          Create teams, assign members, and encourage collaborative learning challenges.
+          Crea team, assegna i membri e promuovi sfide di apprendimento collaborativo.
         </p>
       </div>
 
@@ -46,7 +46,7 @@ export default async function ManageTeamsPage() {
       </div>
 
       {teams.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No teams yet. Start by creating your first team above.</p>
+        <p className="text-sm text-muted-foreground">Nessun team ancora. Crea il primo team qui sopra.</p>
       ) : null}
     </div>
   )

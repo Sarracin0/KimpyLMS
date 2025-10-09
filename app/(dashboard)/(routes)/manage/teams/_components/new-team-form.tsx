@@ -26,7 +26,7 @@ type NewTeamFormProps = {
 }
 
 const formSchema = z.object({
-  name: z.string().min(2, 'Team name must be at least 2 characters'),
+  name: z.string().min(2, 'Il nome del team deve avere almeno 2 caratteri'),
   description: z.string().max(200).optional(),
 })
 
@@ -77,13 +77,13 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
         )
       }
 
-      toast.success('Team created')
+      toast.success('Team creato')
       form.reset()
       setSelected(new Set())
       setQuery('')
       router.refresh()
     } catch {
-      toast.error('Unable to create team right now')
+      toast.error('Impossibile creare il team al momento')
     }
   }
 
@@ -92,11 +92,11 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 rounded-xl border bg-card p-4 shadow-sm md:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-base font-semibold text-foreground">Create a new team</h3>
-            <p className="text-xs text-muted-foreground">Minimal, fast onboarding: name, optional description, pick members.</p>
+            <h3 className="text-base font-semibold text-foreground">Crea un nuovo team</h3>
+            <p className="text-xs text-muted-foreground">Onboarding rapido: nome, descrizione opzionale, selezione dei membri.</p>
           </div>
           {selected.size > 0 ? (
-            <span className="text-xs text-muted-foreground">{selected.size} selected</span>
+            <span className="text-xs text-muted-foreground">{selected.size} selezionati</span>
           ) : null}
         </div>
 
@@ -106,9 +106,9 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Team name</FormLabel>
+                <FormLabel>Nome team</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Product Excellence" disabled={isSubmitting} {...field} />
+                  <Input placeholder="es. Team Prodotto" disabled={isSubmitting} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -119,9 +119,9 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Description (optional)</FormLabel>
+                <FormLabel>Descrizione (opzionale)</FormLabel>
                 <FormControl>
-                  <Input placeholder="What is this team focused on?" disabled={isSubmitting} {...field} />
+                  <Input placeholder="Su cosa è focalizzato questo team?" disabled={isSubmitting} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -135,7 +135,7 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search people (id, title)"
+              placeholder="Cerca persone (id, ruolo)"
               className="h-9 focus-visible:ring-primary/40"
             />
             <Button
@@ -145,12 +145,12 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
               onClick={() => setSelected(new Set())}
               disabled={selected.size === 0 || isSubmitting}
             >
-              Clear
+              Pulisci
             </Button>
           </div>
           <div className="max-h-64 overflow-y-auto px-3 pb-3">
             {filtered.length === 0 ? (
-              <p className="px-1 py-6 text-center text-sm text-muted-foreground">No people found</p>
+              <p className="px-1 py-6 text-center text-sm text-muted-foreground">Nessuna persona trovata</p>
             ) : (
               <ul className="space-y-1">
                 {filtered.map((m) => {
@@ -168,7 +168,7 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
                         </div>
                       </div>
                       <Button type="button" size="sm" variant="outline" onClick={() => toggle(m.id)}>
-                        {checked ? 'Remove' : 'Add'}
+                        {checked ? 'Rimuovi' : 'Aggiungi'}
                       </Button>
                     </li>
                   )
@@ -180,7 +180,7 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
 
         <div className="flex items-center justify-end gap-2">
           <Button type="submit" disabled={!isValid || isSubmitting}>
-            {selected.size > 0 ? `Create team and add ${selected.size}` : 'Create team'}
+            {selected.size > 0 ? `Crea team e aggiungi ${selected.size}` : 'Crea team'}
           </Button>
         </div>
       </form>
