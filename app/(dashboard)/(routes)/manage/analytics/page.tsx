@@ -3,6 +3,7 @@ import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react'
 
 import { getAnalytics } from '@/actions/get-analytics'
 import { requireAuthContext } from '@/lib/current-profile'
+import { cn } from '@/lib/utils'
 
 import { EngagementTrendChart } from './_components/engagement-trend-chart'
 
@@ -49,36 +50,71 @@ const PulseCard = ({ title, helper, metric }: { title: string; helper: string; m
   const delta = describeDelta(metric.delta)
 
   return (
-    <div className="rounded-3xl border border-white/30 bg-white/70 p-5 shadow-sm backdrop-blur">
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{title}</p>
-      <div className="mt-3 flex items-baseline gap-3">
-        <span className="text-3xl font-semibold text-foreground">{formatNumber(metric.value)}</span>
-        <span className={`flex items-center gap-1 text-xs font-medium ${delta.tone}`}>
-          {delta.icon}
-          {delta.label}
-        </span>
+    <div className="relative overflow-hidden rounded-3xl border border-white/40 bg-gradient-to-br from-white/85 via-white/70 to-white/55 p-6 shadow-[0_35px_60px_-40px_rgba(15,23,42,0.45)] backdrop-blur">
+      <div className="pointer-events-none absolute -top-16 -right-10 h-32 w-32 rounded-full bg-primary/25 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-12 left-8 h-24 w-24 rounded-full bg-foreground/5 blur-3xl" />
+      <div className="relative space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
+          <span className={cn('flex items-center gap-1 rounded-full border border-white/60 bg-white/80 px-3 py-1 text-[11px] font-medium', delta.tone)}>
+            {delta.icon}
+            {delta.label}
+          </span>
+        </div>
+        <span className="text-4xl font-semibold tracking-tight text-foreground">{formatNumber(metric.value)}</span>
+        <p className="text-xs leading-relaxed text-muted-foreground/90">{helper}</p>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">{helper}</p>
     </div>
   )
 }
 
-const SpotlightColumn = ({ title, items }: { title: string; items: { courseTitle: string; itemTitle: string; count: number }[] }) => (
-  <div className="rounded-3xl border border-white/30 bg-white/70 p-5 shadow-sm backdrop-blur">
-    <p className="text-sm font-semibold text-foreground">{title}</p>
-    <div className="mt-4 space-y-3 text-sm">
-      {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nessun segnale nelle ultime due settimane.</p>
-      ) : (
-        items.map((item) => (
-          <div key={`${item.courseTitle}-${item.itemTitle}`} className="space-y-1 rounded-xl border border-white/40 bg-white/80 px-3 py-2">
-            <p className="text-xs font-semibold text-foreground">{item.itemTitle}</p>
-            <p className="text-[11px] text-muted-foreground">{item.courseTitle}</p>
-            <p className="text-xs text-foreground">{formatNumber(item.count)} eventi</p>
-          </div>
-        ))
-      )}
+const SpotlightColumn = ({
+  title,
+  items,
+}: {
+  title: string
+  items: { courseTitle: string; itemTitle: string; count: number }[]
+}) => (
+  <div className="relative overflow-hidden rounded-3xl border border-white/40 bg-gradient-to-br from-white/85 via-white/70 to-white/55 p-6 shadow-[0_35px_60px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
+    <div className="pointer-events-none absolute -right-10 top-0 h-28 w-28 rounded-full bg-primary/15 blur-3xl" />
+    <div className="relative space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold leading-tight text-foreground">
+          <span className="break-words">{title}</span>
+        </p>
+        <span className="text-[11px] uppercase tracking-wide text-muted-foreground/80">Ultimi 14 giorni</span>
+      </div>
+      <div className={cn('space-y-3 text-sm', items.length > 4 && 'max-h-72 overflow-y-auto pr-1')}>
+        {items.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Nessun segnale nelle ultime due settimane.</p>
+        ) : (
+          items.map((item) => (
+            <div
+              key={`${item.courseTitle}-${item.itemTitle}`}
+              className="space-y-2 rounded-2xl border border-white/50 bg-white/80 px-4 py-3 shadow-inner"
+            >
+              <p className="text-xs font-semibold leading-snug text-foreground">
+                <span className="break-words">{item.itemTitle}</span>
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                <span className="break-words">{item.courseTitle}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">{formatNumber(item.count)}</span> eventi tracciati
+              </p>
+            </div>
+          ))
+        )}
+      </div>
     </div>
+  </div>
+)
+
+const HeroStat = ({ label, value, helper }: { label: string; value: string; helper: string }) => (
+  <div className="rounded-2xl border border-white/50 bg-white/85 px-5 py-4 shadow-inner">
+    <p className="text-[11px] uppercase tracking-wide text-muted-foreground/80">{label}</p>
+    <p className="mt-2 text-2xl font-semibold text-foreground">{value}</p>
+    <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
   </div>
 )
 
