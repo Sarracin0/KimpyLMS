@@ -74,7 +74,7 @@ export default async function GamificationPage() {
             {pointsLog.map((entry) => (
               <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-sm">
                 <span>{entry.reason ?? entry.type}</span>
-                <span className="text-xs font-semibold text-[#5D62E1]">+{entry.delta}</span>
+                <span className="text-xs font-semibold text-primary">+{entry.delta}</span>
               </div>
             ))}
             {pointsLog.length === 0 ? <p className="text-sm text-muted-foreground">No points awarded yet.</p> : null}
@@ -88,7 +88,7 @@ export default async function GamificationPage() {
           <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {badges.map((userBadge) => (
               <div key={userBadge.id} className="relative rounded-lg border border-border/50 bg-card/70 px-4 py-3">
-                <div className="pointer-events-none absolute left-0 top-0 h-full w-[3px] rounded-l-md bg-[#5D62E1]/80" />
+                <div className="pointer-events-none absolute left-0 top-0 h-full w-[3px] rounded-l-md bg-primary/80" />
                 <p className="text-sm font-semibold text-foreground">{userBadge.badge.name}</p>
                 <p className="text-xs text-muted-foreground">{userBadge.badge.description}</p>
                 <p className="mt-2 text-xs text-muted-foreground">
@@ -500,6 +500,30 @@ export default async function GamificationPage() {
         .filter((entry) => entry.response.trim().length > 0)
     })
     .slice(0, 6)
+
+  const badgesData = badgeSummary.map(({ badge, count, lastAwardedAt }) => ({
+    id: badge.id,
+    name: badge.name,
+    description: badge.description ?? '',
+    count,
+    lastAwardedAt,
+  }))
+
+  return (
+    <GamificationClient
+      badges={badgesData}
+      courseStats={courseStats}
+      topProfiles={topProfiles}
+      scenarioStats={scenarioStats}
+      scenarioMetrics={overallScenarioMetrics}
+      arenaStats={arenaStats}
+      arenaMetrics={overallArenaMetrics}
+      recentArenaSummaries={recentArenaSummaries}
+      recentReflections={recentReflections}
+      badgeAwards={badgeAwards}
+      currentProfileId={profile.id}
+    />
+  )
 
   return (
     <div className="space-y-8 p-6">

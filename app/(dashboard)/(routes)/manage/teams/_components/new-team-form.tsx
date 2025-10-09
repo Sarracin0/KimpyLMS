@@ -89,7 +89,7 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 rounded-lg border bg-white p-4 shadow-sm">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 rounded-xl border bg-card p-4 shadow-sm md:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-base font-semibold text-foreground">Create a new team</h3>
@@ -100,7 +100,7 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
           ) : null}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-5 md:grid-cols-2">
           <FormField
             control={form.control}
             name="name"
@@ -130,13 +130,13 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
         </div>
 
         {/* Quick member pick */}
-        <div className="rounded-md border bg-card">
+        <div className="rounded-md border border-border/60 bg-card">
           <div className="flex items-center gap-2 p-3">
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search people (id, title)"
-              className="h-9"
+              className="h-9 focus-visible:ring-primary/40"
             />
             <Button
               type="button"
@@ -158,7 +158,7 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
                   return (
                     <li
                       key={m.id}
-                      className="flex items-center justify-between rounded-md border p-2 hover:bg-muted/50"
+                      className="flex items-center justify-between rounded-md border border-border/40 bg-muted/20 p-2 hover:border-primary/20 hover:bg-muted/30"
                     >
                       <div className="flex items-center gap-3">
                         <Checkbox checked={checked} onCheckedChange={() => toggle(m.id)} />

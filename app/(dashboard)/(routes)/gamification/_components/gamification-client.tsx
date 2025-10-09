@@ -139,16 +139,16 @@ export function GamificationClient({
   const totalPointsDistributed = topProfiles.reduce((sum, p) => sum + p.points, 0)
 
   return (
-    <div className="space-y-6 p-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Gamification Analytics</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-6 p-6 md:space-y-8 md:p-8">
+      <header className="rounded-xl border border-primary/10 bg-primary/5 p-6">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">Gamification Analytics</h1>
+        <p className="mt-1 text-sm text-muted-foreground md:text-base">
           Monitora badge, performance quiz, decision labs e practice arena per capire l'engagement del team.
         </p>
       </header>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
+        <Card className="transition hover:border-primary/30">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Badge assegnati</CardTitle>
             <Award className="h-4 w-4 text-muted-foreground" />
@@ -159,7 +159,7 @@ export function GamificationClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="transition hover:border-primary/30">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tentativi quiz</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -170,7 +170,7 @@ export function GamificationClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="transition hover:border-primary/30">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Scenario completati</CardTitle>
             <GitBranch className="h-4 w-4 text-muted-foreground" />
@@ -183,7 +183,7 @@ export function GamificationClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="transition hover:border-primary/30">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Punti totali</CardTitle>
             <Sparkles className="h-4 w-4 text-muted-foreground" />

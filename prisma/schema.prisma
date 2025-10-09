@@ -98,6 +98,8 @@ enum AchievementUnlockType {
   LESSON_COMPLETION
   QUIZ_SCORE
   SCENARIO_PERFORMANCE
+  ARENA_PERFORMANCE
+  COURSE_POINTS
 }
 
 enum AttachmentScope {
@@ -122,6 +124,24 @@ enum GamificationStatus {
 enum ScenarioAttemptType {
   SCENARIO
   ARENA
+}
+
+enum PlayerEventType {
+  PAUSE
+  RESUME
+  REWATCH
+  COACH_PROMPT
+}
+
+enum ChapterCommentVisibility {
+  PRIVATE
+  PUBLIC
+  HR_ONLY
+}
+
+enum ChapterCoachMessageRole {
+  USER
+  AI
 }
 
 model Company {
@@ -187,6 +207,9 @@ model UserProfile {
   gamificationRequests    GamificationBlock[]
   flashcardDecksCreated   FlashcardDeck[]
   scenarioAttempts        ScenarioAttempt[]
+  playerEvents            PlayerEvent[]
+  chapterComments         ChapterComment[]
+  coachMessages           ChapterCoachMessage[]
 }
 
 model CompanyTeam {
@@ -298,6 +321,9 @@ model Chapter {
   missions    QuestMission[]
   attachments Attachment[]
   lessonBlock LessonBlock?   @relation("LessonBlockChapter")
+  playerEvents PlayerEvent[]
+  comments     ChapterComment[]
+  coachMessages ChapterCoachMessage[]
 
   @@index([courseId])
 }
@@ -350,6 +376,59 @@ model UserProgress {
   chapter     Chapter     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   @@unique([userProfileId, chapterId])
+}
+
+model PlayerEvent {
+  id             String          @id @default(cuid())
+  chapterId      String
+  userProfileId  String
+  type           PlayerEventType
+  playbackSecond Int?
+  timestampMs    Int?
+  metadata       Json?
+  createdAt      DateTime        @default(now())
+
+  chapter     Chapter     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  userProfile UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId, type])
+  @@index([chapterId, playbackSecond])
+}
+
+model ChapterComment {
+  id             String                   @id @default(cuid())
+  chapterId      String
+  userProfileId  String
+  visibility     ChapterCommentVisibility @default(PRIVATE)
+  content        String
+  playbackSecond Int?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  deletedAt      DateTime?
+
+  chapter     Chapter     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  userProfile UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId, visibility])
+  @@index([chapterId, playbackSecond])
+}
+
+model ChapterCoachMessage {
+  id             String                    @id @default(cuid())
+  chapterId      String
+  userProfileId  String
+  sessionId      String
+  role           ChapterCoachMessageRole
+  content        String
+  playbackSecond Int?
+  metadata       Json?
+  createdAt      DateTime                  @default(now())
+
+  chapter     Chapter     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  userProfile UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([chapterId, createdAt])
 }
 
 model Badge {

@@ -6,11 +6,11 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils'
 
-const progressVariants = cva('h-full w-full flex-1 bg-primary transition-all', {
+const progressVariants = cva('h-full w-full flex-1 transition-all', {
   variants: {
     variant: {
-      default: 'bg-sky-600',
-      success: 'bg-[#5D62E1]',
+      default: 'bg-primary/80',
+      success: 'bg-primary',
       brand: 'bg-primary',
     },
   },

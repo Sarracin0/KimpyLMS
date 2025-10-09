@@ -116,12 +116,12 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
         return new NextResponse('Module is required for module completion achievements', { status: 400 })
       }
 
-      const module = await db.courseModule.findFirst({
+      const courseModuleRecord = await db.courseModule.findFirst({
         where: { id: targetModuleId, courseId: course.id },
         select: { id: true },
       })
 
-      if (!module) {
+      if (!courseModuleRecord) {
         return new NextResponse('Module not found for this course', { status: 400 })
       }
     }
@@ -294,6 +294,88 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
         ...(minScore != null ? { minScore } : {}),
         ...(maxRisk != null ? { maxRisk } : {}),
       }
+    }
+
+    if (unlockType === AchievementUnlockType.ARENA_PERFORMANCE) {
+      const gamificationBlockId =
+        criteriaInput && typeof (criteriaInput as { gamificationBlockId?: unknown }).gamificationBlockId === 'string'
+          ? (criteriaInput as { gamificationBlockId: string }).gamificationBlockId
+          : null
+
+      if (!gamificationBlockId) {
+        return new NextResponse('Practice Arena id is required for arena achievements', { status: 400 })
+      }
+
+      const block = await db.gamificationBlock.findFirst({
+        where: {
+          id: gamificationBlockId,
+          contentType: GamificationContentType.ARENA,
+          lessonBlock: {
+            lesson: {
+              module: {
+                courseId: course.id,
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          lessonBlock: {
+            select: {
+              lessonId: true,
+              lesson: { select: { moduleId: true } },
+            },
+          },
+        },
+      })
+
+      if (!block || !block.lessonBlock) {
+        return new NextResponse('Practice Arena non trovata per questo corso', { status: 400 })
+      }
+
+      targetLessonId = block.lessonBlock.lessonId
+      targetModuleId = targetModuleId ?? block.lessonBlock.lesson.moduleId
+
+      const minScoreRaw =
+        criteriaInput && typeof (criteriaInput as { minScore?: unknown }).minScore === 'number'
+          ? (criteriaInput as { minScore?: number }).minScore
+          : null
+      const minTokensRaw =
+        criteriaInput && typeof (criteriaInput as { minTokens?: unknown }).minTokens === 'number'
+          ? (criteriaInput as { minTokens?: number }).minTokens
+          : null
+      const minEndorsementsRaw =
+        criteriaInput && typeof (criteriaInput as { minEndorsements?: unknown }).minEndorsements === 'number'
+          ? (criteriaInput as { minEndorsements?: number }).minEndorsements
+          : null
+
+      const minScore = minScoreRaw != null ? Math.max(0, Math.min(100, Math.trunc(minScoreRaw))) : null
+      const minTokens = minTokensRaw != null ? Math.max(0, Math.trunc(minTokensRaw)) : null
+      const minEndorsements =
+        minEndorsementsRaw != null ? Math.max(0, Math.trunc(minEndorsementsRaw)) : null
+
+      sanitizedCriteria = {
+        gamificationBlockId: block.id,
+        ...(minScore != null ? { minScore } : {}),
+        ...(minTokens != null ? { minTokens } : {}),
+        ...(minEndorsements != null ? { minEndorsements } : {}),
+      }
+    }
+
+    if (unlockType === AchievementUnlockType.COURSE_POINTS) {
+      const thresholdRaw =
+        criteriaInput && typeof (criteriaInput as { pointsThreshold?: unknown }).pointsThreshold === 'number'
+          ? (criteriaInput as { pointsThreshold?: number }).pointsThreshold
+          : null
+
+      if (!thresholdRaw || thresholdRaw <= 0) {
+        return new NextResponse('Per gli obiettivi sui punti è richiesta una soglia positiva', { status: 400 })
+      }
+
+      const pointsThreshold = Math.max(1, Math.trunc(thresholdRaw))
+      targetModuleId = null
+      targetLessonId = null
+      sanitizedCriteria = { pointsThreshold }
     }
 
     if (

@@ -9,6 +9,8 @@ import { CompanyTeam, TeamMembership, UserProfile, TeamRole } from '@prisma/clie
 
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 type TeamWithMembers = CompanyTeam & {
   memberships: (TeamMembership & {
@@ -64,16 +66,21 @@ export const TeamCard = ({ team, availableMembers }: TeamCardProps) => {
   const totalPoints = team.memberships.reduce((acc, m) => acc + (m.userProfile.points ?? 0), 0)
 
   return (
-    <div className="flex h-full flex-col rounded-lg border bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
-      <div className="mb-3">
-        <h3 className="text-base font-semibold text-foreground">{team.name}</h3>
-        <p className="text-xs text-muted-foreground">{team.description ?? 'No description provided.'}</p>
-        <div className="mt-1 text-xs text-muted-foreground">{membersCount} members • {totalPoints} points</div>
+    <Card className="flex h-full flex-col rounded-xl border bg-card p-4 shadow-sm transition hover:border-primary/30">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold text-foreground">{team.name}</h3>
+          <p className="text-xs text-muted-foreground">{team.description ?? 'No description provided.'}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-[11px]">{membersCount} members</Badge>
+          <Badge className="text-[11px]" variant="secondary">{totalPoints} pts</Badge>
+        </div>
       </div>
 
       <div className="grow space-y-2">
         {team.memberships.map((membership) => (
-          <div key={membership.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+          <div key={membership.id} className="flex items-center justify-between rounded-md border border-border/40 bg-muted/20 px-3 py-2 text-sm hover:border-primary/20">
             <div>
               <p className="font-medium text-foreground">{membership.userProfile.userId}</p>
               <p className="text-xs text-muted-foreground">{membership.userProfile.jobTitle ?? membership.userProfile.role}</p>
@@ -97,7 +104,7 @@ export const TeamCard = ({ team, availableMembers }: TeamCardProps) => {
 
       <div className="mt-4 flex items-center gap-2">
         <Select value={selectedUser} onValueChange={setSelectedUser}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full focus-visible:ring-primary/40">
             <SelectValue placeholder={candidates.length ? 'Select a teammate' : 'Everyone is already assigned'} />
           </SelectTrigger>
           <SelectContent>
@@ -108,10 +115,10 @@ export const TeamCard = ({ team, availableMembers }: TeamCardProps) => {
             ))}
           </SelectContent>
         </Select>
-        <Button onClick={onAddMember} disabled={!selectedUser || isSubmitting}>
+        <Button onClick={onAddMember} disabled={!selectedUser || isSubmitting} className="shrink-0">
           Add
         </Button>
       </div>
-    </div>
+    </Card>
   )
 }

@@ -12,8 +12,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import Link from 'next/link'
-import { PlusCircle } from 'lucide-react'
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
@@ -68,12 +66,6 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
             </SelectContent>
           </Select>
         </div>
-        <Link href="/manage/create">
-          <Button className="bg-[#5D62E1] text-white hover:bg-[#5055c9]">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Nuovo corso
-          </Button>
-        </Link>
       </div>
 
       {/* Table Container with glass effect */}

@@ -29,17 +29,17 @@ export default async function ManageTeamsPage() {
   ])
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 md:space-y-8 md:p-8">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">Team management</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">Team management</h1>
+        <p className="mt-1 text-sm text-muted-foreground md:text-base">
           Create teams, assign members, and encourage collaborative learning challenges.
         </p>
       </div>
 
       <NewTeamForm availableMembers={members} />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {teams.map((team) => (
           <TeamCard key={team.id} team={team} availableMembers={members} />
         ))}

@@ -47,6 +47,7 @@ type AchievementTemplate = {
   requiresLesson?: boolean
   requiresQuiz?: boolean
   requiresScenario?: boolean
+  requiresArena?: boolean
   requiresDeck?: boolean
   defaultQuizSettings?: {
     requirePass?: boolean
@@ -56,6 +57,12 @@ type AchievementTemplate = {
     minScore?: number | null
     maxRisk?: number | null
   }
+  defaultArenaSettings?: {
+    minScore?: number | null
+    minTokens?: number | null
+    minEndorsements?: number | null
+  }
+  defaultPointsThreshold?: number | null
 }
 
 const ACHIEVEMENT_TEMPLATES: AchievementTemplate[] = [
@@ -122,6 +129,30 @@ const ACHIEVEMENT_TEMPLATES: AchievementTemplate[] = [
       maxRisk: 40,
     },
   },
+  {
+    id: 'practice-elite',
+    name: 'Campione Practice Arena',
+    description: 'Ricompensa chi eccelle nella Practice Arena con tokens e endorsement.',
+    unlockType: 'ARENA_PERFORMANCE',
+    defaultPoints: 160,
+    icon: 'sparkles',
+    requiresLesson: true,
+    requiresArena: true,
+    defaultArenaSettings: {
+      minScore: 75,
+      minTokens: 40,
+      minEndorsements: 1,
+    },
+  },
+  {
+    id: 'points-milestone',
+    name: 'Milestone punti corso',
+    description: 'Premia chi raggiunge un certo totale di punti in questo corso.',
+    unlockType: 'COURSE_POINTS',
+    defaultPoints: 120,
+    icon: 'trophy',
+    defaultPointsThreshold: 300,
+  },
 ]
 
 const ICON_OPTIONS = [
@@ -148,11 +179,16 @@ type AchievementFormState = {
   icon: string | null
   selectedQuizId: string | null
   selectedScenarioId: string | null
+  selectedArenaId: string | null
   selectedDeckId: string | null
   quizRequirePass: boolean
   quizMinScore: number | null
   scenarioMinScore: number | null
   scenarioMaxRisk: number | null
+  arenaMinScore: number | null
+  arenaMinTokens: number | null
+  arenaMinEndorsements: number | null
+  pointsThreshold: number | null
 }
 
 type ApiAchievement = CourseAchievement & {
@@ -222,8 +258,50 @@ const describeUnlock = (achievement: CourseAchievement) => {
       }
       return 'Chiudi il Decision Lab con buone performance.'
     }
+    case 'ARENA_PERFORMANCE': {
+      const criteria = (achievement.criteria as Record<string, unknown> | null) ?? null
+      const minScore = criteria && typeof (criteria as { minScore?: unknown }).minScore === 'number'
+        ? (criteria as { minScore?: number }).minScore
+        : null
+      const minTokens = criteria && typeof (criteria as { minTokens?: unknown }).minTokens === 'number'
+        ? (criteria as { minTokens?: number }).minTokens
+        : null
+      const minEndorsements =
+        criteria && typeof (criteria as { minEndorsements?: unknown }).minEndorsements === 'number'
+          ? (criteria as { minEndorsements?: number }).minEndorsements
+          : null
+
+      const parts: string[] = []
+      if (minScore != null) {
+        parts.push(`punteggio ≥ ${minScore}`)
+      }
+      if (minTokens != null) {
+        parts.push(`Insight Tokens ≥ ${minTokens}`)
+      }
+      if (minEndorsements != null) {
+        parts.push(
+          `${minEndorsements} endorsement${minEndorsements === 1 ? '' : 's'}`,
+        )
+      }
+
+      if (parts.length > 0) {
+        return `Practice Arena: ${parts.join(' · ')}`
+      }
+
+      return 'Completa la Practice Arena con un piano approvato.'
+    }
+    case 'COURSE_POINTS': {
+      const criteria = (achievement.criteria as Record<string, unknown> | null) ?? null
+      const threshold = criteria && typeof (criteria as { pointsThreshold?: unknown }).pointsThreshold === 'number'
+        ? Math.max(0, (criteria as { pointsThreshold?: number }).pointsThreshold ?? 0)
+        : null
+      if (threshold && threshold > 0) {
+        return `Raggiungi almeno ${threshold} punti nel corso.`
+      }
+      return 'Raggiungi la soglia punti definita per il corso.'
+    }
     default:
-      return ''
+      return 'Obiettivo personalizzato.'
   }
 }
 
@@ -434,6 +512,37 @@ export const CourseAchievementsPanel = ({
     return options
   }, [modules])
 
+  const arenaOptions = useMemo(() => {
+    const options: {
+      gamificationId: string
+      title: string
+      lessonId: string
+      lessonTitle: string
+      moduleId: string
+      moduleTitle: string
+    }[] = []
+
+    for (const courseModule of modules) {
+      for (const lesson of courseModule.lessons) {
+        for (const block of lesson.blocks) {
+          const gamification = block.gamification
+          if (gamification && gamification.contentType === 'ARENA') {
+            options.push({
+              gamificationId: gamification.id,
+              title: block.title || gamification.arenaSummary?.title || 'Practice Arena',
+              lessonId: lesson.id,
+              lessonTitle: lesson.title,
+              moduleId: courseModule.id,
+              moduleTitle: courseModule.title,
+            })
+          }
+        }
+      }
+    }
+
+    return options
+  }, [modules])
+
   const buildDefaultState = useCallback(
     (template: AchievementTemplate): AchievementFormState => {
       let targetModuleId: string | null = null
@@ -441,6 +550,7 @@ export const CourseAchievementsPanel = ({
       let selectedQuizId: string | null = null
       let selectedDeckId: string | null = null
       let selectedScenarioId: string | null = null
+      let selectedArenaId: string | null = null
 
       if (template.requiresQuiz) {
         const quiz = quizOptions[0]
@@ -469,6 +579,15 @@ export const CourseAchievementsPanel = ({
         }
       }
 
+      if (template.requiresArena) {
+        const arena = arenaOptions[0]
+        if (arena) {
+          targetModuleId = arena.moduleId
+          targetLessonId = arena.lessonId
+          selectedArenaId = arena.gamificationId
+        }
+      }
+
       if (template.requiresLesson && !targetLessonId) {
         const lesson = lessonOptions[0]
         if (lesson) {
@@ -491,14 +610,19 @@ export const CourseAchievementsPanel = ({
         icon: template.icon,
         selectedQuizId,
         selectedScenarioId,
+        selectedArenaId,
         selectedDeckId,
         quizRequirePass: template.defaultQuizSettings?.requirePass ?? true,
         quizMinScore: template.defaultQuizSettings?.minScore ?? null,
         scenarioMinScore: template.defaultScenarioSettings?.minScore ?? null,
         scenarioMaxRisk: template.defaultScenarioSettings?.maxRisk ?? null,
+        arenaMinScore: template.defaultArenaSettings?.minScore ?? null,
+        arenaMinTokens: template.defaultArenaSettings?.minTokens ?? null,
+        arenaMinEndorsements: template.defaultArenaSettings?.minEndorsements ?? null,
+        pointsThreshold: template.defaultPointsThreshold ?? null,
       }
     },
-    [flashcardOptions, lessonOptions, moduleOptions, quizOptions, scenarioOptions],
+    [arenaOptions, flashcardOptions, lessonOptions, moduleOptions, quizOptions, scenarioOptions],
   )
 
   const resetDialogState = () => {
@@ -531,7 +655,9 @@ export const CourseAchievementsPanel = ({
     (selectedTemplate.requiresLesson && !formState.targetLessonId) ||
     (selectedTemplate.requiresQuiz && !formState.selectedQuizId) ||
     (selectedTemplate.requiresDeck && !formState.selectedDeckId) ||
-    (selectedTemplate.requiresScenario && !formState.selectedScenarioId)
+    (selectedTemplate.requiresScenario && !formState.selectedScenarioId) ||
+    (selectedTemplate.requiresArena && !formState.selectedArenaId) ||
+    (formState.unlockType === 'COURSE_POINTS' && (!formState.pointsThreshold || formState.pointsThreshold <= 0))
 
   const handleCreateAchievement = async () => {
     if (!formState.title.trim()) {
@@ -564,6 +690,11 @@ export const CourseAchievementsPanel = ({
       return
     }
 
+    if (selectedTemplate.requiresArena && !formState.selectedArenaId) {
+      toast.error('Collega una Practice Arena per questo obiettivo')
+      return
+    }
+
     if (typeof formState.quizMinScore === 'number' && formState.quizMinScore < 0) {
       toast.error('Il punteggio minimo deve essere positivo')
       return
@@ -580,6 +711,35 @@ export const CourseAchievementsPanel = ({
     ) {
       toast.error('Il rischio massimo deve essere compreso tra 0 e 100')
       return
+    }
+
+    if (
+      typeof formState.arenaMinScore === 'number' &&
+      (formState.arenaMinScore < 0 || formState.arenaMinScore > 100)
+    ) {
+      toast.error('Il punteggio minimo della Practice Arena deve essere tra 0 e 100')
+      return
+    }
+
+    if (typeof formState.arenaMinTokens === 'number' && formState.arenaMinTokens < 0) {
+      toast.error('I token minimi devono essere positivi')
+      return
+    }
+
+    if (
+      typeof formState.arenaMinEndorsements === 'number' &&
+      formState.arenaMinEndorsements < 0
+    ) {
+      toast.error('Gli endorsement minimi devono essere almeno 0')
+      return
+    }
+
+    if (formState.unlockType === 'COURSE_POINTS') {
+      const threshold = formState.pointsThreshold ?? 0
+      if (!Number.isFinite(threshold) || threshold <= 0) {
+        toast.error('Imposta una soglia punti maggiore di zero')
+        return
+      }
     }
 
     try {
@@ -622,6 +782,25 @@ export const CourseAchievementsPanel = ({
           }
           break
         }
+        case 'ARENA_PERFORMANCE': {
+          payload.criteria = {
+            gamificationBlockId: formState.selectedArenaId,
+            ...(typeof formState.arenaMinScore === 'number' ? { minScore: formState.arenaMinScore } : {}),
+            ...(typeof formState.arenaMinTokens === 'number' ? { minTokens: formState.arenaMinTokens } : {}),
+            ...(typeof formState.arenaMinEndorsements === 'number'
+              ? { minEndorsements: Math.max(0, Math.trunc(formState.arenaMinEndorsements)) }
+              : {}),
+          }
+          break
+        }
+        case 'COURSE_POINTS': {
+          payload.targetModuleId = null
+          payload.targetLessonId = null
+          payload.criteria = {
+            pointsThreshold: Math.max(1, Math.trunc(formState.pointsThreshold ?? 0)),
+          }
+          break
+        }
         default:
           payload.criteria = null
       }
@@ -634,7 +813,7 @@ export const CourseAchievementsPanel = ({
       toast.success('Obiettivo creato')
       setIsDialogOpen(false)
       resetDialogState()
-    } catch (error) {
+    } catch {
       toast.error('Impossibile creare l’obiettivo')
     } finally {
       setIsSaving(false)
@@ -657,7 +836,7 @@ export const CourseAchievementsPanel = ({
         current.map((item) => (item.id === updated.id ? updated : item)),
       )
       toast.success(updated.isActive ? 'Obiettivo attivato' : 'Obiettivo disattivato')
-    } catch (error) {
+    } catch {
       toast.error('Non è stato possibile aggiornare l’obiettivo')
     } finally {
       setBusyAchievementId(null)
@@ -673,7 +852,7 @@ export const CourseAchievementsPanel = ({
       await axios.delete(`/api/courses/${courseId}/achievements/${achievement.id}`)
       onAchievementsChange((current) => current.filter((item) => item.id !== achievement.id))
       toast.success('Obiettivo eliminato')
-    } catch (error) {
+    } catch {
       toast.error('Non è stato possibile eliminare l’obiettivo')
     } finally {
       setBusyAchievementId(null)
@@ -993,6 +1172,107 @@ export const CourseAchievementsPanel = ({
                     </div>
                   ) : null}
 
+                  {selectedTemplate.requiresArena ? (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label>Practice Arena</Label>
+                        <Select
+                          value={formState.selectedArenaId ?? ''}
+                          onValueChange={(value) => {
+                            const arena = arenaOptions.find((item) => item.gamificationId === value)
+                            setFormState((state) => ({
+                              ...state,
+                              selectedArenaId: value || null,
+                              targetLessonId: arena ? arena.lessonId : state.targetLessonId,
+                              targetModuleId: arena ? arena.moduleId : state.targetModuleId,
+                            }))
+                          }}
+                          disabled={arenaOptions.length === 0}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona una Practice Arena" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {arenaOptions.map((arena) => (
+                              <SelectItem key={arena.gamificationId} value={arena.gamificationId}>
+                                {arena.title} · {arena.lessonTitle}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {arenaOptions.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            Genera o pubblica una Practice Arena per usare questo template.
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <div className="space-y-2">
+                          <Label>Punteggio minimo</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={formState.arenaMinScore ?? ''}
+                            placeholder="Es. 75"
+                            onChange={(event) => {
+                              const raw = event.target.value
+                              const numeric = Number(raw)
+                              setFormState((state) => ({
+                                ...state,
+                                arenaMinScore:
+                                  raw === '' || Number.isNaN(numeric)
+                                    ? null
+                                    : Math.max(0, Math.min(100, numeric)),
+                              }))
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Insight Tokens minimi</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={formState.arenaMinTokens ?? ''}
+                            placeholder="Es. 40"
+                            onChange={(event) => {
+                              const raw = event.target.value
+                              const numeric = Number(raw)
+                              setFormState((state) => ({
+                                ...state,
+                                arenaMinTokens:
+                                  raw === '' || Number.isNaN(numeric) ? null : Math.max(0, numeric),
+                              }))
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Endorsement minimi</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={formState.arenaMinEndorsements ?? ''}
+                            placeholder="Es. 1"
+                            onChange={(event) => {
+                              const raw = event.target.value
+                              const numeric = Number(raw)
+                              setFormState((state) => ({
+                                ...state,
+                                arenaMinEndorsements:
+                                  raw === '' || Number.isNaN(numeric)
+                                    ? null
+                                    : Math.max(0, Math.trunc(numeric)),
+                              }))
+                            }}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Lascia vuoto per non richiedere endorsement HR.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Punti assegnati</Label>
@@ -1029,6 +1309,30 @@ export const CourseAchievementsPanel = ({
                       </div>
                     </div>
                   </div>
+
+                  {formState.unlockType === 'COURSE_POINTS' ? (
+                    <div className="space-y-2">
+                      <Label>Soglia punti corso</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={formState.pointsThreshold ?? ''}
+                        placeholder="Es. 300"
+                        onChange={(event) => {
+                          const raw = event.target.value
+                          const numeric = Number(raw)
+                          setFormState((state) => ({
+                            ...state,
+                            pointsThreshold:
+                              raw === '' || Number.isNaN(numeric) ? null : Math.max(1, Math.trunc(numeric)),
+                          }))
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Il learner sblocca l’obiettivo quando accumula almeno questo numero di punti all’interno del corso.
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <DialogFooter>

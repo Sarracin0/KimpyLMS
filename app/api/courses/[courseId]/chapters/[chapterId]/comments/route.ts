@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ChapterCommentVisibility, UserRole } from '@prisma/client'
+import { UserRole } from '@prisma/client'
+import type { ChapterCommentVisibility } from '@prisma/client'
 
 import { requireAuthContext } from '@/lib/current-profile'
 import { db } from '@/lib/db'
@@ -12,7 +13,8 @@ type RouteParams = Promise<{
 }>
 
 const MAX_COMMENT_LENGTH = 1200
-const VALID_VISIBILITY = new Set(Object.values(ChapterCommentVisibility))
+const VISIBILITY_VALUES = ['PRIVATE', 'PUBLIC', 'HR_ONLY'] as const satisfies ChapterCommentVisibility[]
+const VALID_VISIBILITY = new Set<string>(VISIBILITY_VALUES)
 
 type CommentPayload = {
   content: string
@@ -44,16 +46,16 @@ function buildVisibilityFilter(
 ): Record<string, unknown>[] {
   if (isHrAdmin) {
     return [
-      { visibility: ChapterCommentVisibility.PUBLIC },
-      { visibility: ChapterCommentVisibility.PRIVATE, userProfileId: profileId },
-      { visibility: ChapterCommentVisibility.HR_ONLY },
+      { visibility: 'PUBLIC' },
+      { visibility: 'PRIVATE', userProfileId: profileId },
+      { visibility: 'HR_ONLY' },
     ]
   }
 
   return [
-    { visibility: ChapterCommentVisibility.PUBLIC },
-    { visibility: ChapterCommentVisibility.PRIVATE, userProfileId: profileId },
-    { visibility: ChapterCommentVisibility.HR_ONLY, userProfileId: profileId },
+    { visibility: 'PUBLIC' },
+    { visibility: 'PRIVATE', userProfileId: profileId },
+    { visibility: 'HR_ONLY', userProfileId: profileId },
   ]
 }
 

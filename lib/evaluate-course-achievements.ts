@@ -1,4 +1,4 @@
-import { AchievementUnlockType, PointsType } from '@prisma/client'
+import { AchievementUnlockType, PointsType, ScenarioAttemptType } from '@prisma/client'
 
 import { db } from './db'
 import { getProgress } from '@/actions/get-progress'
@@ -18,6 +18,8 @@ type AchievementEligibilityContext = {
   completedLessonIds: Set<string>
   quizAttempts: Map<string, { score: number; passed: boolean }>
   scenarioAttempts: Map<string, { score: number; riskLevel: number | null }>
+  arenaAttempts: Map<string, { score: number; tokens: number; endorsements: number }>
+  coursePoints: number
 }
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
@@ -43,6 +45,16 @@ const getNumber = (record: Record<string, unknown>, key: string): number | null 
 const getBoolean = (record: Record<string, unknown>, key: string): boolean | null => {
   const value = record[key]
   return typeof value === 'boolean' ? value : null
+}
+
+const getEndorsementCount = (value: unknown): number => {
+  const record = asRecord(value)
+  if (!record) return 0
+  const endorsements = record.endorsements
+  if (Array.isArray(endorsements)) {
+    return endorsements.length
+  }
+  return 0
 }
 
 const parseQuizCriteria = (criteria: unknown) => {
@@ -71,6 +83,33 @@ const parseScenarioCriteria = (criteria: unknown) => {
     minScore: typeof minScore === 'number' ? Math.max(0, Math.trunc(minScore)) : null,
     maxRisk:
       typeof maxRisk === 'number' ? Math.max(0, Math.min(100, Math.trunc(maxRisk))) : null,
+  }
+}
+
+const parseArenaCriteria = (criteria: unknown) => {
+  const record = asRecord(criteria)
+  if (!record) return null
+  const gamificationBlockId = getString(record, 'gamificationBlockId')
+  if (!gamificationBlockId) return null
+  const minScore = getNumber(record, 'minScore')
+  const minTokens = getNumber(record, 'minTokens')
+  const minEndorsements = getNumber(record, 'minEndorsements')
+  return {
+    gamificationBlockId,
+    minScore: typeof minScore === 'number' ? Math.max(0, Math.trunc(minScore)) : null,
+    minTokens: typeof minTokens === 'number' ? Math.max(0, Math.trunc(minTokens)) : null,
+    minEndorsements:
+      typeof minEndorsements === 'number' ? Math.max(0, Math.trunc(minEndorsements)) : null,
+  }
+}
+
+const parseCoursePointsCriteria = (criteria: unknown) => {
+  const record = asRecord(criteria)
+  if (!record) return null
+  const pointsThreshold = getNumber(record, 'pointsThreshold')
+  if (pointsThreshold == null) return null
+  return {
+    pointsThreshold: Math.max(1, Math.trunc(pointsThreshold)),
   }
 }
 
@@ -192,6 +231,33 @@ const isAchievementEligible = (
       }
       return true
     }
+    case AchievementUnlockType.ARENA_PERFORMANCE: {
+      const parsed = parseArenaCriteria(achievement.criteria)
+      if (!parsed) {
+        return false
+      }
+      const attempt = context.arenaAttempts.get(parsed.gamificationBlockId)
+      if (!attempt) {
+        return false
+      }
+      if (parsed.minScore != null && attempt.score < parsed.minScore) {
+        return false
+      }
+      if (parsed.minTokens != null && attempt.tokens < parsed.minTokens) {
+        return false
+      }
+      if (parsed.minEndorsements != null && attempt.endorsements < parsed.minEndorsements) {
+        return false
+      }
+      return true
+    }
+    case AchievementUnlockType.COURSE_POINTS: {
+      const parsed = parseCoursePointsCriteria(achievement.criteria)
+      if (!parsed) {
+        return false
+      }
+      return context.coursePoints >= parsed.pointsThreshold
+    }
     default:
       return false
   }
@@ -245,7 +311,12 @@ export const evaluateCourseAchievements = async ({
   const moduleChapters = await buildModuleChapterMap(Array.from(new Set(moduleIds)))
 
   const requiresLessonProgress = achievements.some((achievement) =>
-    [AchievementUnlockType.LESSON_COMPLETION, AchievementUnlockType.SCENARIO_PERFORMANCE, AchievementUnlockType.QUIZ_SCORE].includes(
+    [
+      AchievementUnlockType.LESSON_COMPLETION,
+      AchievementUnlockType.SCENARIO_PERFORMANCE,
+      AchievementUnlockType.ARENA_PERFORMANCE,
+      AchievementUnlockType.QUIZ_SCORE,
+    ].includes(
       achievement.unlockType,
     ),
   )
@@ -299,30 +370,91 @@ export const evaluateCourseAchievements = async ({
     .map((achievement) => parseScenarioCriteria(achievement.criteria)?.gamificationBlockId)
     .filter((value): value is string => Boolean(value))
 
-  const uniqueScenarioIds = Array.from(new Set(scenarioIds))
+  const arenaIds = achievements
+    .map((achievement) => parseArenaCriteria(achievement.criteria)?.gamificationBlockId)
+    .filter((value): value is string => Boolean(value))
 
-  const scenarioAttempts = uniqueScenarioIds.length
+  const uniqueScenarioIds = Array.from(new Set(scenarioIds))
+  const uniqueArenaIds = Array.from(new Set(arenaIds))
+  const gamificationIds = Array.from(new Set([...uniqueScenarioIds, ...uniqueArenaIds]))
+
+  const scenarioAttempts = gamificationIds.length
     ? await db.scenarioAttempt.findMany({
         where: {
           userProfileId,
-          gamificationBlockId: { in: uniqueScenarioIds },
+          gamificationBlockId: { in: gamificationIds },
         },
         orderBy: [{ score: 'desc' }, { createdAt: 'desc' }],
       })
     : []
 
-  const scenarioAttemptMap = scenarioAttempts.reduce<
-    Map<string, { score: number; riskLevel: number | null }>
-  >((accumulator, attempt) => {
-    const existing = accumulator.get(attempt.gamificationBlockId)
-    if (!existing || attempt.score > existing.score) {
-      accumulator.set(attempt.gamificationBlockId, {
+  const scenarioAttemptMap = new Map<string, { score: number; riskLevel: number | null }>()
+  const arenaAttemptMap = new Map<string, { score: number; tokens: number; endorsements: number }>()
+
+  for (const attempt of scenarioAttempts) {
+    if (attempt.attemptType === ScenarioAttemptType.ARENA) {
+      const existing = arenaAttemptMap.get(attempt.gamificationBlockId)
+      const endorsements = getEndorsementCount(attempt.reflections)
+      const candidate = {
         score: attempt.score,
-        riskLevel: typeof attempt.riskLevel === 'number' ? attempt.riskLevel : null,
-      })
+        tokens: Math.max(0, attempt.insightTokens ?? 0),
+        endorsements,
+      }
+
+      if (
+        !existing ||
+        candidate.score > existing.score ||
+        (candidate.score === existing.score && candidate.tokens > existing.tokens)
+      ) {
+        arenaAttemptMap.set(attempt.gamificationBlockId, candidate)
+      }
+    } else {
+      const existing = scenarioAttemptMap.get(attempt.gamificationBlockId)
+      if (!existing || attempt.score > existing.score) {
+        scenarioAttemptMap.set(attempt.gamificationBlockId, {
+          score: attempt.score,
+          riskLevel: typeof attempt.riskLevel === 'number' ? attempt.riskLevel : null,
+        })
+      }
     }
-    return accumulator
-  }, new Map())
+  }
+
+  const [chapterPointsAgg, lessonPointsAgg, achievementPointsAgg] = await Promise.all([
+    db.userProgress.aggregate({
+      where: {
+        userProfileId,
+        chapter: {
+          courseId,
+        },
+      },
+      _sum: { pointsAwarded: true },
+    }),
+    db.userLessonProgress.aggregate({
+      where: {
+        userProfileId,
+        lesson: {
+          module: {
+            courseId,
+          },
+        },
+      },
+      _sum: { pointsAwarded: true },
+    }),
+    db.userCourseAchievement.aggregate({
+      where: {
+        userProfileId,
+        achievement: {
+          courseId,
+        },
+      },
+      _sum: { pointsAwarded: true },
+    }),
+  ])
+
+  const coursePoints =
+    (chapterPointsAgg._sum.pointsAwarded ?? 0) +
+    (lessonPointsAgg._sum.pointsAwarded ?? 0) +
+    (achievementPointsAgg._sum.pointsAwarded ?? 0)
 
   const computedProgress =
     typeof progressPercentage === 'number' ? progressPercentage : await getProgress(userProfileId, courseId)
@@ -334,6 +466,8 @@ export const evaluateCourseAchievements = async ({
     completedLessonIds,
     quizAttempts: quizAttemptMap,
     scenarioAttempts: scenarioAttemptMap,
+    arenaAttempts: arenaAttemptMap,
+    coursePoints,
   }
 
   for (const achievement of achievements) {
