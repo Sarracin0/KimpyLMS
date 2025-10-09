@@ -120,6 +120,9 @@ const gamificationStatusStyles: Record<string, string> = {
   FAILED: 'bg-rose-100 text-rose-700',
 }
 
+const formatCountLabel = (count: number, singular: string, plural: string) =>
+  `${count} ${count === 1 ? singular : plural}`
+
 interface ModuleAccordionProps {
   module: Module
   onUpdateModule: (moduleId: string, data: Partial<Module>) => void

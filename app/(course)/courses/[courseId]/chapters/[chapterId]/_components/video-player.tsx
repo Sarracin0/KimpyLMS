@@ -5,16 +5,42 @@ import axios from 'axios'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from 'react'
 import { toast } from 'react-hot-toast'
-import { Loader2, Lock, MessageCircle, NotebookPen, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Play, Pause, X } from 'lucide-react'
+import {
+  Loader2,
+  Lock,
+  MessageCircle,
+  MessageSquare,
+  NotebookPen,
+  Sparkles,
+  Volume2,
+  VolumeX,
+  Maximize2,
+  Minimize2,
+  Play,
+  Pause,
+  X,
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useConfettiStore } from '@/hooks/use-confetti'
 import type { VideoCheckpoint } from '@/types/video'
+import { PlayerCoachPanel } from './player-coach-panel'
+import { PlayerCommentsPanel } from './player-comments-panel'
+import type { HeatmapBucket, PlayerEventPayload } from './player-types'
 
 type ProgressState = {
   playedSeconds: number
   played?: number
+}
+
+type FullscreenDocument = Document & {
+  webkitFullscreenElement?: Element | null
+  webkitExitFullscreen?: () => Promise<void> | void
+}
+
+type FullscreenElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void> | void
 }
 
 const ReactPlayer = dynamic(() => import('react-player'), { ssr: false })
@@ -75,8 +101,15 @@ export const VideoPlayer = ({
   const [duration, setDuration] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isCoachOpen, setIsCoachOpen] = useState(false)
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false)
+  const [heatmapBuckets, setHeatmapBuckets] = useState<HeatmapBucket[]>([])
+  const [hasLoadedHeatmap, setHasLoadedHeatmap] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const playerRef = useRef<ReactPlayerInstance | null>(null)
+  const pendingEventsRef = useRef<PlayerEventPayload[]>([])
+  const flushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastProgressRef = useRef(0)
 
   useEffect(() => {
     setIsPlaying(!isLocked)
@@ -87,15 +120,51 @@ export const VideoPlayer = ({
     setActiveCheckpointId(null)
     setSeenCheckpointIds(new Set())
     setIsNotesOpen(false)
+    setIsCoachOpen(false)
+    setIsCommentsOpen(false)
+    setHeatmapBuckets([])
+    setHasLoadedHeatmap(false)
     setPlayed(0)
     setPlayedSeconds(0)
     setDuration(0)
-  }, [videoUrl])
+    pendingEventsRef.current = []
+    if (flushTimeoutRef.current) {
+      clearTimeout(flushTimeoutRef.current)
+      flushTimeoutRef.current = null
+    }
+    lastProgressRef.current = 0
+  }, [videoUrl, chapterId])
 
   useEffect(() => {
     setActiveCheckpointId(null)
     setSeenCheckpointIds(new Set())
   }, [checkpoints])
+
+  useEffect(() => {
+    if (!videoUrl || isLocked || hasLoadedHeatmap) return
+    let cancelled = false
+
+    const fetchHeatmap = async () => {
+      try {
+        const { data } = await axios.get(`/api/courses/${courseId}/chapters/${chapterId}/player-events`)
+        if (!cancelled && Array.isArray(data?.buckets)) {
+          setHeatmapBuckets(data.buckets as HeatmapBucket[])
+        }
+      } catch {
+        // Swallow network errors: heatmap is a progressive enhancement
+      } finally {
+        if (!cancelled) {
+          setHasLoadedHeatmap(true)
+        }
+      }
+    }
+
+    void fetchHeatmap()
+
+    return () => {
+      cancelled = true
+    }
+  }, [videoUrl, isLocked, courseId, chapterId, hasLoadedHeatmap])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -114,7 +183,8 @@ export const VideoPlayer = ({
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      const isFull = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement)
+      const fullscreenDocument = document as FullscreenDocument
+      const isFull = Boolean(fullscreenDocument.fullscreenElement || fullscreenDocument.webkitFullscreenElement)
       setIsFullscreen(isFull)
     }
     document.addEventListener('fullscreenchange', handleFullscreenChange)
@@ -140,6 +210,27 @@ export const VideoPlayer = ({
     }))
   }, [duration, orderedCheckpoints])
 
+  const heatmapSegments = useMemo(() => {
+    if (!duration || duration <= 0 || heatmapBuckets.length === 0) return []
+    const maxCount = Math.max(...heatmapBuckets.map((bucket) => bucket.count))
+    if (!maxCount || maxCount <= 0) return []
+    const baseWidth = Math.max(0.6, (1 / duration) * 100)
+
+    return heatmapBuckets
+      .filter((bucket) => Number.isFinite(bucket.second))
+      .map((bucket) => {
+        const position = Math.min(Math.max(bucket.second / duration, 0), 1) * 100
+        const width = Math.min(baseWidth, 12)
+        const color = heatColor(bucket.count / maxCount)
+        return {
+          key: `${bucket.second}-${bucket.count}`,
+          left: position,
+          width,
+          color,
+        }
+      })
+  }, [duration, heatmapBuckets])
+
   const markerColor = (type: string) => {
     switch (type) {
       case 'QUIZ':
@@ -153,6 +244,94 @@ export const VideoPlayer = ({
       default:
         return 'bg-white/80'
     }
+  }
+
+  const heatColor = (intensity: number) => {
+    const clamped = Math.max(0, Math.min(intensity, 1))
+    const start = [250, 204, 21]
+    const end = [239, 68, 68]
+    const r = Math.round(start[0] + (end[0] - start[0]) * clamped)
+    const g = Math.round(start[1] + (end[1] - start[1]) * clamped)
+    const b = Math.round(start[2] + (end[2] - start[2]) * clamped)
+    const alpha = 0.25 + 0.35 * clamped
+    return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(2)})`
+  }
+
+  const flushEvents = useCallback(async () => {
+    if (isLocked) {
+      pendingEventsRef.current = []
+      return
+    }
+
+    const batch = pendingEventsRef.current.splice(0, pendingEventsRef.current.length)
+    if (batch.length === 0) return
+
+    try {
+      await axios.post(`/api/courses/${courseId}/chapters/${chapterId}/player-events`, {
+        events: batch,
+      })
+    } catch {
+      pendingEventsRef.current = [...batch, ...pendingEventsRef.current]
+    }
+  }, [chapterId, courseId, isLocked])
+
+  const scheduleFlush = useCallback(() => {
+    if (flushTimeoutRef.current) return
+    flushTimeoutRef.current = setTimeout(() => {
+      flushTimeoutRef.current = null
+      void flushEvents()
+    }, 1200)
+  }, [flushEvents])
+
+  const queueEvent = useCallback(
+    (event: PlayerEventPayload) => {
+      if (isLocked) return
+      pendingEventsRef.current = [...pendingEventsRef.current, event]
+
+      if (pendingEventsRef.current.length >= 8) {
+        if (flushTimeoutRef.current) {
+          clearTimeout(flushTimeoutRef.current)
+          flushTimeoutRef.current = null
+        }
+        void flushEvents()
+        return
+      }
+
+      scheduleFlush()
+    },
+    [flushEvents, isLocked, scheduleFlush],
+  )
+
+  useEffect(() => () => {
+    if (flushTimeoutRef.current) {
+      clearTimeout(flushTimeoutRef.current)
+      flushTimeoutRef.current = null
+    }
+    if (pendingEventsRef.current.length > 0) {
+      void flushEvents()
+    }
+  }, [flushEvents])
+
+  const toggleCoachPanel = () => {
+    setIsCoachOpen((previous) => {
+      const next = !previous
+      if (next) {
+        setIsCommentsOpen(false)
+        setIsNotesOpen(false)
+      }
+      return next
+    })
+  }
+
+  const toggleCommentsPanel = () => {
+    setIsCommentsOpen((previous) => {
+      const next = !previous
+      if (next) {
+        setIsCoachOpen(false)
+        setIsNotesOpen(false)
+      }
+      return next
+    })
   }
 
   const onEnd = useCallback(async () => {
@@ -188,6 +367,14 @@ export const VideoPlayer = ({
       }
       if (typeof state.playedSeconds === 'number') {
         setPlayedSeconds(state.playedSeconds)
+        const delta = state.playedSeconds - lastProgressRef.current
+        if (delta < -2) {
+          queueEvent({
+            type: 'REWATCH',
+            playbackSecond: Math.max(0, Math.round(state.playedSeconds)),
+          })
+        }
+        lastProgressRef.current = state.playedSeconds
       }
 
       const nextCheckpoint = orderedCheckpoints.find(
@@ -199,7 +386,7 @@ export const VideoPlayer = ({
         setIsPlaying(false)
       }
     },
-    [activeCheckpoint, orderedCheckpoints, seenCheckpointIds, isLocked, videoUrl],
+    [activeCheckpoint, orderedCheckpoints, seenCheckpointIds, isLocked, videoUrl, queueEvent],
   )
 
   const markCheckpointAsSeen = useCallback((checkpointId: string | null) => {
@@ -232,6 +419,13 @@ export const VideoPlayer = ({
       const next = !previous
       if (next) {
         setIsNotesOpen(false)
+        setIsCoachOpen(false)
+        setIsCommentsOpen(false)
+      }
+      if (!next) {
+        setIsCoachOpen(true)
+        setIsCommentsOpen(false)
+        setIsNotesOpen(false)
       }
       return next
     })
@@ -243,6 +437,7 @@ export const VideoPlayer = ({
     playerRef.current?.seekTo(fraction, 'fraction')
     setPlayed(fraction)
     setPlayedSeconds(fraction * duration)
+    lastProgressRef.current = fraction * duration
   }
 
   const handleSeek = (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -265,23 +460,25 @@ export const VideoPlayer = ({
     const node = containerRef.current
     if (!node) return
     const exit = () => {
-      if (document.exitFullscreen) {
-        void document.exitFullscreen().catch(() => undefined)
-      } else if ((document as any).webkitExitFullscreen) {
-        ;(document as any).webkitExitFullscreen()
+      const fullscreenDocument = document as FullscreenDocument
+      if (fullscreenDocument.exitFullscreen) {
+        void fullscreenDocument.exitFullscreen().catch(() => undefined)
+      } else if (fullscreenDocument.webkitExitFullscreen) {
+        void fullscreenDocument.webkitExitFullscreen()
       }
     }
 
     const enter = () => {
-      const element = node as any
+      const element = node as FullscreenElement
       if (element.requestFullscreen) {
         void element.requestFullscreen().catch(() => undefined)
       } else if (element.webkitRequestFullscreen) {
-        element.webkitRequestFullscreen()
+        void element.webkitRequestFullscreen()
       }
     }
 
-    const isFull = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement)
+    const fullscreenDocument = document as FullscreenDocument
+    const isFull = Boolean(fullscreenDocument.fullscreenElement || fullscreenDocument.webkitFullscreenElement)
     if (isFull) {
       exit()
     } else {
@@ -348,11 +545,27 @@ export const VideoPlayer = ({
             onReady={() => setIsReady(true)}
             onPlay={() => {
               setIsPlaying(true)
+              setIsCoachOpen(false)
+              setIsCommentsOpen(false)
               setIsNotesOpen(false)
+              queueEvent({
+                type: 'RESUME',
+                playbackSecond: Math.max(0, Math.round(lastProgressRef.current)),
+              })
             }}
             onPause={() => {
               setIsPlaying(false)
-              setIsNotesOpen(true)
+              setIsNotesOpen(false)
+              setIsCoachOpen((previous) => {
+                if (isCommentsOpen) {
+                  return previous
+                }
+                return true
+              })
+              queueEvent({
+                type: 'PAUSE',
+                playbackSecond: Math.max(0, Math.round(lastProgressRef.current)),
+              })
             }}
             onEnded={onEnd}
             onProgress={handleProgress}
@@ -387,6 +600,12 @@ export const VideoPlayer = ({
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-end">
               <div className={`pointer-events-none absolute inset-0 transition-opacity ${isPlaying ? 'opacity-0' : 'opacity-100'} bg-black/60`} />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              {!isPlaying ? (
+                <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between px-6 pt-6 text-sm text-white/85">
+                  <span className="font-medium">Pausa attiva</span>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-wider">Coach AI pronto a rispondere</span>
+                </div>
+              ) : null}
               <div className="pointer-events-auto relative z-10 flex w-full items-center gap-3 px-4 pb-4">
                 <button
                   type="button"
@@ -404,6 +623,23 @@ export const VideoPlayer = ({
                       onClick={handleSeek}
                       onTouchStart={handleSeekTouch}
                     >
+                      {heatmapSegments.length > 0 ? (
+                        <div className="absolute inset-0 overflow-hidden rounded-full pointer-events-none">
+                          {heatmapSegments.map((segment) => (
+                            <span
+                              key={segment.key}
+                              className="absolute top-0 bottom-0 rounded-full"
+                              style={{
+                                left: `${segment.left}%`,
+                                width: `${segment.width}%`,
+                                background: segment.color,
+                                transform: 'translateX(-50%)',
+                                pointerEvents: 'none',
+                              }}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
                       <div className="absolute inset-y-0 left-0 rounded-full bg-primary transition-all" style={{ width: `${played * 100}%` }} />
                       {timelineMarkers.map((marker) => (
                         <span
@@ -490,15 +726,40 @@ export const VideoPlayer = ({
       ) : null}
 
       {!activeCheckpoint && !isLocked ? (
-        <div className="absolute inset-y-0 right-0 z-10 flex flex-col items-end justify-start p-4">
-          <Button
-            size="icon"
-            variant={isNotesOpen ? 'secondary' : 'outline'}
-            className="mb-2 h-9 w-9 rounded-full bg-white/80 text-slate-900 shadow"
-            onClick={() => setIsNotesOpen((prev) => !prev)}
-          >
-            {isNotesOpen ? <X className="h-4 w-4" /> : <NotebookPen className="h-4 w-4" />}
-          </Button>
+        <div className="absolute inset-y-0 right-0 z-30 flex flex-col items-end gap-3 p-4">
+          <div className="flex flex-col items-end gap-2">
+            <Button
+              size="icon"
+              variant={isCoachOpen ? 'secondary' : 'outline'}
+              className="h-9 w-9 rounded-full bg-white/85 text-slate-900 shadow"
+              onClick={toggleCoachPanel}
+              title="Apri Coach AI"
+            >
+              {isCoachOpen ? <Sparkles className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+            </Button>
+            <Button
+              size="icon"
+              variant={isCommentsOpen ? 'secondary' : 'outline'}
+              className="h-9 w-9 rounded-full bg-white/85 text-slate-900 shadow"
+              onClick={toggleCommentsPanel}
+              title="Gestisci commenti"
+            >
+              {isCommentsOpen ? <MessageSquare className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
+            </Button>
+            <Button
+              size="icon"
+              variant={isNotesOpen ? 'secondary' : 'outline'}
+              className="h-9 w-9 rounded-full bg-white/80 text-slate-900 shadow"
+              onClick={() => {
+                setIsNotesOpen((prev) => !prev)
+                setIsCoachOpen(false)
+                setIsCommentsOpen(false)
+              }}
+              title="Blocco note personale"
+            >
+              {isNotesOpen ? <X className="h-4 w-4" /> : <NotebookPen className="h-4 w-4" />}
+            </Button>
+          </div>
           {isNotesOpen ? (
             <div className="w-60 max-w-full rounded-xl bg-white/95 p-3 text-slate-900 shadow-lg">
               <div className="mb-2 flex items-center justify-between">
@@ -518,6 +779,29 @@ export const VideoPlayer = ({
             </div>
           ) : null}
         </div>
+      ) : null}
+
+      {!isLocked && videoUrl ? (
+        <>
+          <div className="pointer-events-none absolute inset-0 flex justify-end">
+            <PlayerCoachPanel
+              courseId={courseId}
+              chapterId={chapterId}
+              currentSecond={Math.max(0, Math.round(playedSeconds))}
+              isOpen={isCoachOpen}
+              onClose={() => setIsCoachOpen(false)}
+            />
+          </div>
+          <div className="pointer-events-none absolute inset-0 flex justify-end">
+            <PlayerCommentsPanel
+              courseId={courseId}
+              chapterId={chapterId}
+              currentSecond={Math.max(0, Math.round(playedSeconds))}
+              isOpen={isCommentsOpen}
+              onClose={() => setIsCommentsOpen(false)}
+            />
+          </div>
+        </>
       ) : null}
     </div>
   )
