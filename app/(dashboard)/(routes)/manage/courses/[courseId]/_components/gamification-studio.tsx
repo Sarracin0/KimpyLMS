@@ -233,20 +233,25 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
           }
         : null
 
-      const scenarioPayload = extractScenarioPayload(gamificationRaw?.result ?? null)
-      const mappedScenarioSummary = scenarioPayload ? summarizeScenario(scenarioPayload) : null
-
       if (process.env.NODE_ENV !== 'production') {
         console.groupCollapsed('[GamificationStudio] buildNextBlock');
         console.log('raw gamification payload', gamificationRaw);
-        console.log('extracted scenario payload', scenarioPayload);
-        console.log('extracted arena payload', arenaPayload);
         console.log('incoming block snapshot', block);
         console.groupEnd();
       }
 
+      const scenarioPayload = extractScenarioPayload(gamificationRaw?.result ?? null)
+      const mappedScenarioSummary = scenarioPayload ? summarizeScenario(scenarioPayload) : null
+
       const arenaPayload = extractArenaPayload(gamificationRaw?.result ?? null)
       const mappedArenaSummary = arenaPayload ? summarizeArena(arenaPayload) : null
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.groupCollapsed('[GamificationStudio] buildNextBlock payloads');
+        console.log('scenario payload', scenarioPayload);
+        console.log('arena payload', arenaPayload);
+        console.groupEnd();
+      }
 
       const statusValue = ensureString(gamificationRaw?.status)
       const contentTypeValue = ensureString(gamificationRaw?.contentType)
