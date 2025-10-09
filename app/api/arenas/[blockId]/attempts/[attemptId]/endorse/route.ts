@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma, UserRole } from '@prisma/client'
+import { PointsType, Prisma, UserRole } from '@prisma/client'
 
 import { assertRole, requireAuthContext } from '@/lib/current-profile'
 import { db } from '@/lib/db'
@@ -82,6 +82,24 @@ export async function POST(_request: NextRequest, { params }: { params: RoutePar
     }
 
     const endorsementBonus = arenaPayload.tokens?.endorsementBonus ?? DEFAULT_ENDORSEMENT_BONUS
+
+    if (endorsementBonus > 0) {
+      await db.$transaction([
+        db.userProfile.update({
+          where: { id: attempt.userProfileId },
+          data: { points: { increment: endorsementBonus } },
+        }),
+        db.userPoints.create({
+          data: {
+            userProfileId: attempt.userProfileId,
+            delta: endorsementBonus,
+            type: PointsType.BONUS,
+            reason: 'Practice Arena endorsement bonus',
+            referenceId: attempt.gamificationBlockId,
+          },
+        }),
+      ])
+    }
 
     const updatedEndorsements = [
       ...existingEndorsements,

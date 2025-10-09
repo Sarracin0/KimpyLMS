@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import type { GeneratedArenaPayload } from '@/lib/gamification/types'
 
 const MIN_PLAN_WORDS = 40
@@ -141,81 +142,41 @@ export function PracticeArenaPlayer({ blockId, arena, attempts, contextConfig }:
 
   const evaluationAxes = lastEvaluation?.axes ?? arena.axes.map((axis) => ({ axisId: axis.id, label: axis.label, score: 0, evidence: '', suggestion: '' }))
 
+  const displayScore = attemptCount > 0 ? overallScore : arena.tokens.baseAward
+
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold text-foreground">Practice Arena</h1>
-        <p className="text-sm text-muted-foreground">{arena.scenarioBrief}</p>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {contextLabel ? <Badge variant="outline">{contextLabel}</Badge> : null}
-          {contextAudience ? <Badge variant="outline">Per {contextAudience}</Badge> : null}
-          <Badge variant="outline">{arena.axes.length} assi di valutazione</Badge>
-          {arena.estimatedDurationMinutes ? <Badge variant="outline">~{arena.estimatedDurationMinutes} min</Badge> : null}
-          <Badge variant="secondary" className="gap-1">
-            <Sparkles className="h-3 w-3" /> Tokens base {arena.tokens.baseAward}
-          </Badge>
-          {attemptCount > 0 ? <Badge variant="outline">{attemptCount} tentativi</Badge> : null}
-        </div>
-      </div>
-
-      <Card className="border border-border/60 bg-card/80 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Brief operativo</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm text-muted-foreground">
-          <div>
-            <p className="text-xs font-semibold uppercase text-foreground/70">Focus principale</p>
-            <p className="mt-1 text-sm text-foreground">{arena.challenge}</p>
-          </div>
-          <Separator />
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <p className="text-xs font-semibold uppercase text-foreground/70">Obiettivi da centrare</p>
-              <ul className="mt-2 space-y-1 text-sm">
-                {arena.objectives.map((objective) => (
-                  <li key={objective} className="flex items-start gap-2">
-                    <Target className="mt-0.5 h-3 w-3 text-primary" />
-                    <span>{objective}</span>
-                  </li>
-                ))}
-              </ul>
+      <Card className="relative overflow-visible border border-border/60 bg-card/80 shadow-sm">
+        <CardContent className="pt-8">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold leading-tight text-foreground">
+                {arena.title}
+              </h1>
+              <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{arena.scenarioBrief}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {contextLabel ? <Badge variant="outline">{contextLabel}</Badge> : null}
+                {contextAudience ? <Badge variant="outline">Per {contextAudience}</Badge> : null}
+                <Badge variant="outline">{arena.axes.length} assi</Badge>
+                {arena.estimatedDurationMinutes ? <Badge variant="outline">~{arena.estimatedDurationMinutes} min</Badge> : null}
+                {attemptCount > 0 ? <Badge variant="outline">{attemptCount} tentativi</Badge> : null}
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-semibold uppercase text-foreground/70">Sezioni attese nel piano</p>
-              <p className="mt-2 text-sm text-foreground">{arena.expectedSections.join(' · ')}</p>
-              {arena.aiCoachTips.length > 0 ? (
-                <p className="mt-3 text-xs">Suggerimenti HR: {arena.aiCoachTips.join(' · ')}</p>
-              ) : null}
-              {contextMustInclude ? (
-                <p className="mt-3 text-xs">
-                  Elementi obbligatori: <span className="font-semibold text-foreground/90">{contextMustInclude}</span>
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <Separator />
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase text-foreground/70">Rubrica di valutazione</p>
-            <div className="space-y-3">
-              {arena.axes.map((axis) => (
-                <div key={axis.id} className="rounded-md border border-border/50 bg-background/70 p-3 text-xs">
-                  <div className="flex items-center justify-between text-foreground">
-                    <span className="font-semibold">{axis.label}</span>
-                    {typeof axis.weight === 'number' ? <span className="text-muted-foreground">Peso {axis.weight}</span> : null}
-                  </div>
-                  {axis.description ? <p className="mt-1 text-muted-foreground">{axis.description}</p> : null}
-                  <ul className="mt-2 space-y-1 text-muted-foreground">
-                    {axis.levels.excels ? <li><strong>Eccellenza:</strong> {axis.levels.excels}</li> : null}
-                    {axis.levels.solid ? <li><strong>Solido:</strong> {axis.levels.solid}</li> : null}
-                    {axis.levels.needsSupport ? <li><strong>Da migliorare:</strong> {axis.levels.needsSupport}</li> : null}
-                  </ul>
-                </div>
-              ))}
-            </div>
+            <button
+              type="button"
+              disabled
+              aria-label="Score badge"
+              className="pointer-events-none absolute -top-4 -right-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-sm ring-1 ring-border"
+            >
+              <span className="text-lg font-semibold">{displayScore}</span>
+            </button>
           </div>
         </CardContent>
       </Card>
 
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(300px,380px)]">
+        <div className="space-y-6">
       <Card className="border border-border/60 bg-card/80 shadow-sm">
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
@@ -340,6 +301,91 @@ export function PracticeArenaPlayer({ blockId, arena, attempts, contextConfig }:
           )}
         </CardContent>
       </Card>
+        </div>
+        <div className="space-y-6">
+          <Card className="border border-border/60 bg-card/80 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Dettagli</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="multiple" defaultValue={['brief']}
+              >
+                <AccordionItem value="brief">
+                  <AccordionTrigger>Brief operativo</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <div>
+                        <p className="text-xs font-medium text-foreground/70">Focus principale</p>
+                        <p className="mt-1 text-foreground">{arena.challenge}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-foreground/70">Obiettivi</p>
+                        <ul className="mt-2 space-y-1">
+                          {arena.objectives.map((objective) => (
+                            <li key={objective} className="flex items-start gap-2">
+                              <Target className="mt-0.5 h-3 w-3 text-primary" />
+                              <span>{objective}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-foreground/70">Sezioni attese</p>
+                        <p className="mt-1 text-foreground">{arena.expectedSections.join(' · ')}</p>
+                        {arena.aiCoachTips.length > 0 ? (
+                          <p className="mt-3 text-xs">Suggerimenti HR: {arena.aiCoachTips.join(' · ')}</p>
+                        ) : null}
+                        {contextMustInclude ? (
+                          <p className="mt-3 text-xs">
+                            Elementi obbligatori: <span className="font-semibold text-foreground/90">{contextMustInclude}</span>
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="rubric">
+                  <AccordionTrigger>Rubrica di valutazione</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3 text-xs">
+                      {arena.axes.map((axis) => (
+                        <div key={axis.id} className="rounded-md border border-border/50 bg-background/70 p-3">
+                          <div className="flex items-center justify-between text-foreground">
+                            <span className="font-medium">{axis.label}</span>
+                            {typeof axis.weight === 'number' ? (
+                              <span className="text-muted-foreground">Peso {axis.weight}</span>
+                            ) : null}
+                          </div>
+                          {axis.description ? (
+                            <p className="mt-1 text-muted-foreground">{axis.description}</p>
+                          ) : null}
+                          <ul className="mt-2 space-y-1 text-muted-foreground">
+                            {axis.levels.excels ? (
+                              <li>
+                                <strong>Eccellenza:</strong> {axis.levels.excels}
+                              </li>
+                            ) : null}
+                            {axis.levels.solid ? (
+                              <li>
+                                <strong>Solido:</strong> {axis.levels.solid}
+                              </li>
+                            ) : null}
+                            {axis.levels.needsSupport ? (
+                              <li>
+                                <strong>Da migliorare:</strong> {axis.levels.needsSupport}
+                              </li>
+                            ) : null}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

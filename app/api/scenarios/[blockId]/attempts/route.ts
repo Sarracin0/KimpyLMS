@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { UserRole, Prisma } from '@prisma/client'
+import { PointsType, Prisma, UserRole } from '@prisma/client'
 
 import { requireAuthContext, assertRole } from '@/lib/current-profile'
 import { db } from '@/lib/db'
@@ -170,15 +170,21 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
     const pointsAwarded = isFirstAttempt ? Math.min(MAX_POINTS_REWARD, normalizedScore) : 0
 
     if (pointsAwarded > 0 && profile.role === UserRole.LEARNER) {
-      await db.userPoints.create({
-        data: {
-          userProfileId: profile.id,
-          delta: pointsAwarded,
-          type: 'COMPLETION',
-          reason: `Decision Lab completed (${scenario.intro.slice(0, 40)})`,
-          referenceId: block.gamification.id,
-        },
-      })
+      await db.$transaction([
+        db.userProfile.update({
+          where: { id: profile.id },
+          data: { points: { increment: pointsAwarded } },
+        }),
+        db.userPoints.create({
+          data: {
+            userProfileId: profile.id,
+            delta: pointsAwarded,
+            type: PointsType.COMPLETION,
+            reason: `Decision Lab completed (${scenario.intro.slice(0, 40)})`,
+            referenceId: block.gamification.id,
+          },
+        }),
+      ])
     }
 
     if (profile.role === UserRole.LEARNER) {

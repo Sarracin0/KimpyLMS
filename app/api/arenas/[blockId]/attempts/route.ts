@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma, UserRole } from '@prisma/client'
+import { PointsType, Prisma, UserRole } from '@prisma/client'
 
 import { assertRole, requireAuthContext } from '@/lib/current-profile'
 import { db } from '@/lib/db'
@@ -122,6 +122,24 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
     })
 
     if (profile.role === UserRole.LEARNER) {
+      if (tokensAwarded > 0) {
+        await db.$transaction([
+          db.userProfile.update({
+            where: { id: profile.id },
+            data: { points: { increment: tokensAwarded } },
+          }),
+          db.userPoints.create({
+            data: {
+              userProfileId: profile.id,
+              delta: tokensAwarded,
+              type: PointsType.BONUS,
+              reason: 'Practice Arena tokens',
+              referenceId: block.gamification.id,
+            },
+          }),
+        ])
+      }
+
       await db.userLessonProgress.upsert({
         where: {
           userProfileId_lessonId: {
