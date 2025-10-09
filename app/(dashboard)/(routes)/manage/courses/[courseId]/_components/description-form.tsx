@@ -21,7 +21,7 @@ interface DescriptionFormProps {
 
 const formSchema = z.object({
   description: z.string().min(1, {
-    message: 'Description is required',
+    message: 'La descrizione è obbligatoria',
   }),
 })
 
@@ -44,32 +44,32 @@ export const DescriptionForm = ({ initialData, courseId }: DescriptionFormProps)
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       await axios.patch(`/api/courses/${courseId}`, values)
-      toast.success('Course updated')
+      toast.success('Corso aggiornato')
       toggleEdit()
       router.refresh()
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Si è verificato un errore')
     }
   }
 
   return (
     <div className="rounded-xl border border-border/60 bg-card/80 p-6 shadow-sm transition-colors hover:border-primary/40">
       <div className="flex items-center justify-between font-medium">
-        Course description
+        Descrizione del corso
         <Button onClick={toggleEdit} variant="ghost">
           {isEditing ? (
-            <>Cancel</>
+            <>Annulla</>
           ) : (
             <>
               <Pencil className="mr-2 h-4 w-4" />
-              Edit description
+              Modifica descrizione
             </>
           )}
         </Button>
       </div>
       {!isEditing && (
         <p className={cn('mt-2 text-sm', !initialData.description && 'italic text-slate-500')}>
-          {initialData.description || 'No description'}
+          {initialData.description || 'Nessuna descrizione'}
         </p>
       )}
       {isEditing && (
@@ -81,7 +81,7 @@ export const DescriptionForm = ({ initialData, courseId }: DescriptionFormProps)
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Textarea disabled={isSubmitting} placeholder="e.g. 'This course is about...'" {...field} />
+                    <Textarea disabled={isSubmitting} placeholder="es. 'Questo corso riguarda...'" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -89,7 +89,7 @@ export const DescriptionForm = ({ initialData, courseId }: DescriptionFormProps)
             />
             <div className="flex items-center gap-x-2">
               <Button disabled={!isValid || isSubmitting} type="submit">
-                Save
+                Salva
               </Button>
             </div>
           </form>

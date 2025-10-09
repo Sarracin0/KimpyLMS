@@ -25,11 +25,11 @@ export default function Actions({ disabled, isPublished, courseId }: ActionsProp
       setIsLoading(true)
 
       await axios.delete(`/api/courses/${courseId}`)
-      toast.success('Course deleted')
+      toast.success('Corso eliminato')
       router.refresh()
       router.push('/manage/courses')
     } catch {
-      toast.error('Something went wrong!')
+      toast.error('Si è verificato un errore!')
     } finally {
       setIsLoading(false)
     }
@@ -40,15 +40,15 @@ export default function Actions({ disabled, isPublished, courseId }: ActionsProp
       setIsLoading(true)
       if (isPublished) {
         await axios.patch(`/api/courses/${courseId}/unpublish`)
-        toast.success('Course unpublished!')
+        toast.success('Corso non più pubblicato!')
       } else {
         await axios.patch(`/api/courses/${courseId}/publish`)
-        toast.success('Course published!')
+        toast.success('Corso pubblicato!')
         confetti.onOpen()
       }
       router.refresh()
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Si è verificato un errore')
     } finally {
       setIsLoading(false)
     }
@@ -57,7 +57,7 @@ export default function Actions({ disabled, isPublished, courseId }: ActionsProp
   return (
     <div className="flex items-center gap-x-2">
       <Button disabled={disabled || isLoading} variant="outline" size="sm" onClick={onPublish}>
-        {isPublished ? 'Unpublish' : 'Publish'}
+        {isPublished ? 'Rimuovi pubblicazione' : 'Pubblica'}
       </Button>
       <ConfirmModal onConfirm={onDelete}>
         <Button variant="destructive" size="sm" disabled={isLoading}>

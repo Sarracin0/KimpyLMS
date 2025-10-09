@@ -18,7 +18,7 @@ interface ImageFormProps {
 
 const formSchema = z.object({
   imageUrl: z.string().min(1, {
-    message: 'Image is required',
+    message: "L'immagine è obbligatoria",
   }),
 })
 
@@ -33,30 +33,30 @@ export const ImageForm = ({ initialData, courseId }: ImageFormProps) => {
     try {
       await formSchema.parseAsync(values)
       await axios.patch(`/api/courses/${courseId}`, values)
-      toast.success('Course updated')
+      toast.success('Corso aggiornato')
       toggleEdit()
       router.refresh()
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Si è verificato un errore')
     }
   }
 
   return (
     <div className="rounded-xl border border-border/60 bg-card/80 p-6 shadow-sm transition-colors hover:border-primary/40">
       <div className="flex items-center justify-between font-medium">
-        Course image
+        Immagine del corso
         <Button onClick={toggleEdit} variant="ghost">
-          {isEditing && <>Cancel</>}
+          {isEditing && <>Annulla</>}
           {!isEditing && !initialData.imageUrl && (
             <>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add an image
+              Aggiungi un&apos;immagine
             </>
           )}
           {!isEditing && initialData.imageUrl && (
             <>
               <Pencil className="mr-2 h-4 w-4" />
-              Edit image
+              Modifica immagine
             </>
           )}
         </Button>
@@ -68,7 +68,7 @@ export const ImageForm = ({ initialData, courseId }: ImageFormProps) => {
           </div>
         ) : (
           <div className="relative mt-4 aspect-video overflow-hidden rounded-lg border border-border/40">
-            <Image alt="Upload" fill className="object-cover" src={initialData.imageUrl} />
+            <Image alt="Anteprima immagine" fill className="object-cover" src={initialData.imageUrl} />
           </div>
         ))}
       {isEditing && (
@@ -81,7 +81,7 @@ export const ImageForm = ({ initialData, courseId }: ImageFormProps) => {
               }
             }}
           />
-          <div className="mt-4 text-xs text-muted-foreground">16:9 aspect ratio recommended</div>
+          <div className="mt-4 text-xs text-muted-foreground">Rapporto 16:9 consigliato</div>
         </div>
       )}
     </div>

@@ -104,32 +104,32 @@ const CourseIdPage = async ({ params }: CourseIdPageProps) => {
   const recommended = [
     {
       id: 'basics',
-      label: 'Course basics saved',
-      helper: 'Title and overview added',
+      label: 'Informazioni base del corso salvate',
+      helper: 'Titolo e panoramica aggiunti',
       isComplete: Boolean(course.title && course.description),
     },
     {
       id: 'lessons',
-      label: 'At least one lesson published',
-      helper: 'Keep lessons as drafts until ready',
+      label: 'Almeno una lezione pubblicata',
+      helper: 'Mantieni le lezioni in bozza finché non sono pronte',
       isComplete: hasPublishedLesson,
     },
     {
       id: 'media',
-      label: 'Lesson media added',
-      helper: 'Upload or link a video',
+      label: 'Contenuti multimediali della lezione aggiunti',
+      helper: 'Carica o collega un video',
       isComplete: hasLessonMedia,
     },
     {
       id: 'resources',
-      label: 'Supporting resources attached',
-      helper: 'Optional slides, PDFs or links',
+      label: 'Risorse di supporto allegate',
+      helper: 'Slide, PDF o link opzionali',
       isComplete: hasSupportingResources,
     },
     {
       id: 'achievements',
-      label: 'Achievements configured',
-      helper: 'Motivate learners with rewards',
+      label: 'Obiettivi configurati',
+      helper: 'Motiva i learner con ricompense',
       isComplete: hasGamification,
     },
   ]
@@ -143,7 +143,7 @@ const CourseIdPage = async ({ params }: CourseIdPageProps) => {
 
   return (
     <>
-      {!course.isPublished && <Banner label="This course is unpublished. It will not be visible to the students." />}
+      {!course.isPublished && <Banner label="Questo corso non è pubblicato. Non sarà visibile agli studenti." />}
       <div className="p-6">
         <CourseBuilderWizard
           course={course}

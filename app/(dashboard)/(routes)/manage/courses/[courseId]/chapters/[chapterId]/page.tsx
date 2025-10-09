@@ -55,7 +55,7 @@ const ChapterIdPage = async ({ params }: ChapterIdPageProps) => {
   return (
     <>
       {!chapter.isPublished && (
-        <Banner variant="warning" label="This chapter is unpublished. It will not be visible in the course." />
+        <Banner variant="warning" label="Questo capitolo non è pubblicato. Non sarà visibile nel corso." />
       )}
       <div className="p-6">
         <div className="flex items-center justify-between">
@@ -65,12 +65,12 @@ const ChapterIdPage = async ({ params }: ChapterIdPageProps) => {
               className="mb-6 flex items-center text-sm transition hover:opacity-75"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to course setup
+              Torna alla configurazione del corso
             </Link>
             <div className="flex w-full items-center justify-between">
               <div className="flex flex-col gap-y-2">
-                <h1 className="text-2xl font-medium">Chapter workbook</h1>
-                <span className="text-sm text-muted-foreground">Complete all fields {completionText}</span>
+                <h1 className="text-2xl font-medium">Workspace del capitolo</h1>
+                <span className="text-sm text-muted-foreground">Compila tutti i campi {completionText}</span>
               </div>
               <ChapterActions
                 disabled={!isComplete}
@@ -86,7 +86,7 @@ const ChapterIdPage = async ({ params }: ChapterIdPageProps) => {
             <div>
               <div className="flex items-center gap-x-2">
                 <IconBadge icon={LayoutDashboard} />
-                <h2 className="text-xl">Customize your chapter</h2>
+                <h2 className="text-xl">Personalizza il capitolo</h2>
               </div>
               <ChapterTitleForm
                 initialData={chapter}
@@ -102,7 +102,7 @@ const ChapterIdPage = async ({ params }: ChapterIdPageProps) => {
             <div>
               <div className="flex items-center gap-x-2">
                 <IconBadge icon={Eye} />
-                <h2 className="text-xl">Access Settings</h2>
+                <h2 className="text-xl">Impostazioni di accesso</h2>
               </div>
               <ChapterAccessForm
                 initialData={chapter}
@@ -114,7 +114,7 @@ const ChapterIdPage = async ({ params }: ChapterIdPageProps) => {
           <div>
             <div className="flex items-center gap-x-2">
               <IconBadge icon={Video} />
-              <h2 className="text-xl">Add lesson content</h2>
+              <h2 className="text-xl">Aggiungi contenuti alla lezione</h2>
             </div>
             <ChapterVideoForm
               initialData={chapter}

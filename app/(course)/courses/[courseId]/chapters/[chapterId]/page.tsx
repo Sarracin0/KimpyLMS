@@ -62,15 +62,15 @@ export default async function ChapterDetails({ params }: ChapterDetailsProps) {
 
   return (
     <div>
-      {userProgress?.isCompleted ? <Banner label="You already completed this chapter." variant="success" /> : null}
-      {isLocked ? <Banner label="Enroll in this course to unlock the chapter." variant="warning" /> : null}
+      {userProgress?.isCompleted ? <Banner label="Hai già completato questo capitolo." variant="success" /> : null}
+      {isLocked ? <Banner label="Iscriviti a questo corso per sbloccare il capitolo." variant="warning" /> : null}
 
       <div className="mx-auto max-w-5xl space-y-4 pb-20 p-4">
         {/* Header: title above video with action on the right */}
         <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-white/20 bg-white/60 p-5 text-foreground backdrop-blur-md supports-[backdrop-filter]:bg-white/50 md:flex-row">
           <div>
             <h1 className="text-2xl font-semibold">{chapter.title}</h1>
-            <p className="text-sm text-muted-foreground">Part of {course.title}</p>
+            <p className="text-sm text-muted-foreground">Parte di {course.title}</p>
           </div>
           {enrollment ? (
             <CourseProgressButton
@@ -151,7 +151,7 @@ export default async function ChapterDetails({ params }: ChapterDetailsProps) {
           {chapter.description ? (
             <Preview value={chapter.description} />
           ) : (
-            <p className="text-sm text-muted-foreground">No description provided for this lesson yet.</p>
+            <p className="text-sm text-muted-foreground">Nessuna descrizione disponibile per questa lezione.</p>
           )}
         </div>
 

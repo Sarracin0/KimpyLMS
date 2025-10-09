@@ -78,7 +78,7 @@ const ACHIEVEMENT_TEMPLATES: AchievementTemplate[] = [
   },
   {
     id: 'course-champion',
-    name: 'Course champion',
+    name: 'Campione del corso',
     description: 'Celebra chi conclude l’intero corso.',
     unlockType: 'COURSE_COMPLETION',
     defaultPoints: 150,
@@ -86,7 +86,7 @@ const ACHIEVEMENT_TEMPLATES: AchievementTemplate[] = [
   },
   {
     id: 'quiz-ace',
-    name: 'Quiz ace',
+    name: 'Asso dei quiz',
     description: 'Ricompensa chi supera un quiz con successo.',
     unlockType: 'QUIZ_SCORE',
     defaultPoints: 120,
@@ -100,7 +100,7 @@ const ACHIEVEMENT_TEMPLATES: AchievementTemplate[] = [
   },
   {
     id: 'flashcard-completer',
-    name: 'Flashcard finisher',
+    name: 'Campione delle flashcard',
     description: 'Sblocca quando il learner completa il deck di flashcard.',
     unlockType: 'LESSON_COMPLETION',
     defaultPoints: 80,
@@ -110,7 +110,7 @@ const ACHIEVEMENT_TEMPLATES: AchievementTemplate[] = [
   },
   {
     id: 'decision-pro',
-    name: 'Decision Lab pro',
+    name: 'Pro del Decision Lab',
     description: 'Premia chi chiude il Decision Lab con punteggio alto e rischio sotto controllo.',
     unlockType: 'SCENARIO_PERFORMANCE',
     defaultPoints: 150,
@@ -125,10 +125,10 @@ const ACHIEVEMENT_TEMPLATES: AchievementTemplate[] = [
 ]
 
 const ICON_OPTIONS = [
-  { value: 'sparkles', label: 'Sparkles', icon: Sparkles },
-  { value: 'flag', label: 'Flag', icon: Flag },
-  { value: 'trophy', label: 'Trophy', icon: Trophy },
-  { value: 'star', label: 'Star', icon: Star },
+  { value: 'sparkles', label: 'Scintille', icon: Sparkles },
+  { value: 'flag', label: 'Bandiera', icon: Flag },
+  { value: 'trophy', label: 'Trofeo', icon: Trophy },
+  { value: 'star', label: 'Stella', icon: Star },
 ]
 
 type CourseAchievementsPanelProps = {
@@ -281,7 +281,7 @@ function EnableLeaderboardToggle({ courseId }: { courseId: string }) {
 
   return (
     <div className="mt-2 inline-flex items-center gap-3 rounded-lg border border-border/40 bg-card/80 px-3 py-2">
-      <span className="text-xs text-muted-foreground">Leaderboard del corso</span>
+      <span className="text-xs text-muted-foreground">Classifica del corso</span>
       <Button type="button" size="sm" variant={enabled ? 'default' : 'outline'} onClick={toggle} disabled={saving || enabled == null}>
         {enabled ? 'Abilitata' : 'Disabilitata'}
       </Button>
@@ -535,32 +535,32 @@ export const CourseAchievementsPanel = ({
 
   const handleCreateAchievement = async () => {
     if (!formState.title.trim()) {
-      toast.error('Aggiungi un titolo per l’achievement')
+      toast.error('Aggiungi un titolo per l’obiettivo')
       return
     }
 
     if (selectedTemplate.requiresModule && !formState.targetModuleId) {
-      toast.error('Seleziona un modulo per questo achievement')
+      toast.error('Seleziona un modulo per questo obiettivo')
       return
     }
 
     if (selectedTemplate.requiresLesson && !formState.targetLessonId) {
-      toast.error('Seleziona una lezione per questo achievement')
+      toast.error('Seleziona una lezione per questo obiettivo')
       return
     }
 
     if (selectedTemplate.requiresQuiz && !formState.selectedQuizId) {
-      toast.error('Collega un quiz per questo achievement')
+      toast.error('Collega un quiz per questo obiettivo')
       return
     }
 
     if (selectedTemplate.requiresDeck && !formState.selectedDeckId) {
-      toast.error('Collega un deck di flashcard per questo achievement')
+      toast.error('Collega un deck di flashcard per questo obiettivo')
       return
     }
 
     if (selectedTemplate.requiresScenario && !formState.selectedScenarioId) {
-      toast.error('Collega un Decision Lab per questo achievement')
+      toast.error('Collega un Decision Lab per questo obiettivo')
       return
     }
 
@@ -631,11 +631,11 @@ export const CourseAchievementsPanel = ({
       const mapped = mapAchievementResponse(response.data)
 
       onAchievementsChange((current) => [...current, mapped])
-      toast.success('Achievement creato')
+      toast.success('Obiettivo creato')
       setIsDialogOpen(false)
       resetDialogState()
     } catch (error) {
-      toast.error('Impossibile creare l’achievement')
+      toast.error('Impossibile creare l’obiettivo')
     } finally {
       setIsSaving(false)
     }
@@ -656,25 +656,25 @@ export const CourseAchievementsPanel = ({
       onAchievementsChange((current) =>
         current.map((item) => (item.id === updated.id ? updated : item)),
       )
-      toast.success(updated.isActive ? 'Achievement attivato' : 'Achievement disattivato')
+      toast.success(updated.isActive ? 'Obiettivo attivato' : 'Obiettivo disattivato')
     } catch (error) {
-      toast.error('Non è stato possibile aggiornare l’achievement')
+      toast.error('Non è stato possibile aggiornare l’obiettivo')
     } finally {
       setBusyAchievementId(null)
     }
   }
 
   const handleDeleteAchievement = async (achievement: CourseAchievement) => {
-    const shouldDelete = window.confirm(`Vuoi eliminare “${achievement.title}”?`)
+    const shouldDelete = window.confirm(`Vuoi eliminare l’obiettivo “${achievement.title}”?`)
     if (!shouldDelete) return
 
     try {
       setBusyAchievementId(achievement.id)
       await axios.delete(`/api/courses/${courseId}/achievements/${achievement.id}`)
       onAchievementsChange((current) => current.filter((item) => item.id !== achievement.id))
-      toast.success('Achievement eliminato')
+      toast.success('Obiettivo eliminato')
     } catch (error) {
-      toast.error('Non è stato possibile eliminare l’achievement')
+      toast.error('Non è stato possibile eliminare l’obiettivo')
     } finally {
       setBusyAchievementId(null)
     }
@@ -684,7 +684,7 @@ export const CourseAchievementsPanel = ({
     <div className="space-y-6">
       <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border/60 bg-muted/30 p-6 shadow-sm md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <h3 className="text-base font-semibold text-foreground">Achievement hub</h3>
+          <h3 className="text-base font-semibold text-foreground">Centro obiettivi</h3>
           <p className="text-sm text-muted-foreground">
             Crea ricompense rapide e tieni traccia dei punti assegnati quando i learner avanzano nel corso.
           </p>
@@ -695,11 +695,11 @@ export const CourseAchievementsPanel = ({
           <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
             <Button onClick={() => handleOpenChange(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Nuovo achievement
+              Nuovo obiettivo
             </Button>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Configura achievement</DialogTitle>
+                <DialogTitle>Configura obiettivo</DialogTitle>
                 <DialogDescription>Scegli un template e personalizza titolo, moduli e punti assegnati.</DialogDescription>
               </DialogHeader>
               <div className="space-y-6 py-2">
@@ -1036,7 +1036,7 @@ export const CourseAchievementsPanel = ({
                   Annulla
                 </Button>
                 <Button onClick={handleCreateAchievement} disabled={creationDisabled}>
-                  {isSaving ? 'Salvataggio…' : 'Crea achievement'}
+          {isSaving ? 'Salvataggio…' : 'Crea obiettivo'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1048,9 +1048,9 @@ export const CourseAchievementsPanel = ({
         {sortedAchievements.length === 0 ? (
           <Card className="border-dashed border-border/60 bg-muted/20">
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Nessun achievement ancora</CardTitle>
+              <CardTitle className="text-base font-semibold">Nessun obiettivo ancora</CardTitle>
               <CardDescription>
-                Aggiungi un achievement per guidare il comportamento desiderato e distribuire punti gamification.
+                Aggiungi un obiettivo per guidare il comportamento desiderato e distribuire punti gamification.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -1085,7 +1085,7 @@ export const CourseAchievementsPanel = ({
                       <p className="text-xs">Lezione: {achievement.targetLesson.title}</p>
                     ) : null}
                     <p className="text-xs font-medium text-foreground">
-                      +{achievement.pointsReward} pts
+                      +{achievement.pointsReward} punti
                     </p>
                   </div>
                   <div className="flex items-center justify-between border-t border-border/40 pt-3 text-xs text-muted-foreground">

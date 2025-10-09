@@ -44,7 +44,7 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
     const response = await axios.post(`/api/courses/${courseId}/chapters/${chapterId}/attachments`, payload)
     const next = [response.data as Attachment, ...items]
     refresh(next)
-    toast.success('Resource added')
+    toast.success('Risorsa aggiunta')
   }
 
   const handleUpload = async (url?: string) => {
@@ -52,13 +52,13 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
       if (!url) return
       await createAttachment({ url })
     } catch {
-      toast.error('Unable to add file')
+      toast.error('Impossibile aggiungere il file')
     }
   }
 
   const handleCreateLink = async () => {
     if (!linkForm.url) {
-      toast.error('Add a valid URL')
+      toast.error('Inserisci un URL valido')
       return
     }
 
@@ -71,7 +71,7 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
       })
       setLinkForm({ url: '', name: '' })
     } catch {
-      toast.error('Unable to save link')
+      toast.error('Impossibile salvare il link')
     } finally {
       setIsLinkSaving(false)
     }
@@ -82,9 +82,9 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
       await axios.delete(`/api/courses/${courseId}/chapters/${chapterId}/attachments/${attachmentId}`)
       const next = items.filter((item) => item.id !== attachmentId)
       refresh(next)
-      toast.success('Resource removed')
+      toast.success('Risorsa rimossa')
     } catch {
-      toast.error('Unable to delete resource')
+      toast.error('Impossibile eliminare la risorsa')
     }
   }
 
@@ -98,19 +98,19 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 p-4">
-        <p className="text-sm font-medium text-foreground">Upload supporting files</p>
-        <p className="text-xs text-muted-foreground">Slide decks, PDFs, worksheets or transcripts.</p>
+        <p className="text-sm font-medium text-foreground">Carica file di supporto</p>
+        <p className="text-xs text-muted-foreground">Presentazioni, PDF, dispense o trascrizioni.</p>
         <div className="mt-3">
           <FileUpload endpoint="courseAttachment" onChange={handleUpload} />
         </div>
       </div>
 
       <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
-        <p className="text-sm font-medium text-foreground">Link to hosted content</p>
-        <p className="text-xs text-muted-foreground">Embed knowledge base articles, Google Docs or intranet pages.</p>
+        <p className="text-sm font-medium text-foreground">Collega contenuti esterni</p>
+        <p className="text-xs text-muted-foreground">Incorpora articoli della knowledge base, Google Docs o pagine intranet.</p>
         <div className="mt-3 flex flex-col gap-2 md:flex-row">
           <Input
-            placeholder="Resource name"
+            placeholder="Nome della risorsa"
             value={linkForm.name}
             onChange={(event) => setLinkForm((state) => ({ ...state, name: event.target.value }))}
           />
@@ -121,14 +121,14 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
             className="md:flex-1"
           />
           <Button type="button" onClick={handleCreateLink} disabled={isLinkSaving}>
-            {isLinkSaving ? 'Saving…' : 'Add link'}
+            {isLinkSaving ? 'Salvataggio…' : 'Aggiungi link'}
           </Button>
         </div>
       </div>
 
       <div className="space-y-2">
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No lesson resources yet.</p>
+          <p className="text-sm text-muted-foreground">Nessuna risorsa per questa lezione.</p>
         ) : (
           items.map((item) => (
             <div

@@ -126,7 +126,7 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
               return [{ id: lessonBlock.id, type: 'SCENARIO', label: lessonBlock.title || 'Decision Lab' }]
             }
             if (lessonBlock.gamification.contentType === 'ARENA') {
-              return [{ id: lessonBlock.id, type: 'ARENA', label: lessonBlock.title || 'Practice Arena' }]
+              return [{ id: lessonBlock.id, type: 'ARENA', label: lessonBlock.title || 'Arena di pratica' }]
             }
             if (
               lessonBlock.gamification.contentType === 'FLASHCARDS' &&
@@ -136,7 +136,7 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
                 {
                   id: lessonBlock.id,
                   type: 'FLASHCARDS',
-                  label: lessonBlock.gamification.flashcardDeck.title || 'Flashcard deck',
+                  label: lessonBlock.gamification.flashcardDeck.title || 'Mazzo di flashcard',
                   deckId: lessonBlock.gamification.flashcardDeck.id,
                 },
               ]
@@ -320,13 +320,13 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
       case 'ARENA':
         return (
           <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-            Practice Arena
+            Arena di pratica
           </Badge>
         )
       case 'FLASHCARDS':
         return (
           <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-            Flashcards
+            Flashcard
           </Badge>
         )
       default:
@@ -403,7 +403,7 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-1">
-                  <Label htmlFor="checkpoint-time">Timecode (sec)</Label>
+                  <Label htmlFor="checkpoint-time">Timecode (secondi)</Label>
                   <Input
                     id="checkpoint-time"
                     type="number"
@@ -466,12 +466,12 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
                     </SelectItem>
                     <SelectItem value="ARENA">
                       <div className="flex items-center gap-2">
-                        <PencilLine className="h-3.5 w-3.5" /> Practice Arena
+                        <PencilLine className="h-3.5 w-3.5" /> Arena di pratica
                       </div>
                     </SelectItem>
                     <SelectItem value="FLASHCARDS">
                       <div className="flex items-center gap-2">
-                        <Layers className="h-3.5 w-3.5" /> Flashcard deck
+                        <Layers className="h-3.5 w-3.5" /> Mazzo di flashcard
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -558,10 +558,10 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
 
               {formState.actionType === 'ARENA' ? (
                 <div className="space-y-2">
-                  <Label>Practice Arena</Label>
+                  <Label>Arena di pratica</Label>
                   {arenaList.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      Nessuna Practice Arena disponibile. Generane una dal blocco Gamification per collegarla al video.
+                      Nessuna arena di pratica disponibile. Generane una dal blocco Gamification per collegarla al video.
                     </p>
                   ) : (
                     <Select
@@ -569,7 +569,7 @@ export const VideoCheckpointsEditor = ({ courseId, moduleId, lesson, block, onRe
                       onValueChange={(value) => setFormState((prev) => ({ ...prev, arenaBlockId: value }))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleziona una Practice Arena" />
+                        <SelectValue placeholder="Seleziona un&apos;arena di pratica" />
                       </SelectTrigger>
                       <SelectContent>
                         {arenaList.map((option) => (

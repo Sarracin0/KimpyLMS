@@ -63,6 +63,13 @@ const STATUS_COLORS: Record<GamificationStatus, string> = {
   FAILED: 'bg-rose-100 text-rose-700',
 }
 
+const STATUS_LABELS: Record<GamificationStatus, string> = {
+  DRAFT: 'Bozza',
+  GENERATING: 'In generazione',
+  READY: 'Pronto',
+  FAILED: 'Errore',
+}
+
 const DEFAULT_SETTINGS: GenerationSettings = {
   questionCount: 6,
   difficulty: 'mixed',
@@ -129,7 +136,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
       setDocuments(response.data)
       setSelectedDocs((prev) => prev.filter((id) => response.data.some((doc) => doc.id === id)))
     } catch (error) {
-      toast.error('Unable to load course documents')
+      toast.error('Impossibile caricare i documenti del corso')
       logError('GAMIFICATION_DOCS_LOAD', error)
     } finally {
       setIsLoadingDocs(false)
@@ -160,7 +167,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
 
   const handleAddDocument = async () => {
     if (!newDoc.url.trim()) {
-      toast.error('Add a valid URL')
+      toast.error('Inserisci un URL valido')
       return
     }
 
@@ -175,9 +182,9 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
       setDocuments((prev) => [created, ...prev])
       setSelectedDocs((prev) => [...prev, created.id])
       setNewDoc({ name: '', url: '' })
-      toast.success('Document added')
+      toast.success('Documento aggiunto')
     } catch (error) {
-      toast.error('Unable to add document')
+      toast.error('Impossibile aggiungere il documento')
       logError('GAMIFICATION_DOCS_CREATE', error)
     } finally {
       setIsSavingDoc(false)
@@ -204,7 +211,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
       const mappedFlashcards = flashcardsRaw
         ? {
             id: ensureString(flashcardsRaw.id) || block.gamification?.flashcardDeck?.id || generateId(),
-            title: ensureString(flashcardsRaw.title) || block.gamification?.flashcardDeck?.title || 'Deck',
+            title: ensureString(flashcardsRaw.title) || block.gamification?.flashcardDeck?.title || 'Mazzo',
             description: ensureNullableString(flashcardsRaw.description) ?? block.gamification?.flashcardDeck?.description ?? null,
             cardCount: flashcardCardsRaw.length,
             cards: flashcardCardsRaw
@@ -306,7 +313,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
 
   const handleGenerate = async () => {
     if (selectedDocs.length === 0) {
-      toast.error('Select at least one document')
+      toast.error('Seleziona almeno un documento')
       return
     }
 
@@ -320,7 +327,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
 
       const payload = response.data?.block
       if (!payload) {
-        toast.error('Unexpected response from generator')
+        toast.error('Risposta inattesa dal generatore')
         return
       }
 
@@ -336,9 +343,9 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
       setContentType(nextContentType)
       setSelectedDocs(nextBlock.gamification?.sourceAttachmentIds ?? [])
       onReplaceBlock(moduleId, lessonId, block.id, nextBlock)
-      toast.success('Content generated')
+      toast.success('Contenuto generato')
     } catch (error) {
-      toast.error('Unable to generate content')
+      toast.error('Impossibile generare il contenuto')
       logError('GAMIFICATION_GENERATE_CLIENT', error)
     } finally {
       setIsGenerating(false)
@@ -351,10 +358,10 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
     contentType === 'QUIZ'
       ? 'Quiz'
       : contentType === 'FLASHCARDS'
-        ? 'Flashcards'
+        ? 'Flashcard'
         : contentType === 'SCENARIO'
           ? 'Decision Lab'
-          : 'Practice Arena'
+          : 'Arena di pratica'
   const ResolvedContentIcon =
     contentType === 'QUIZ'
       ? ListChecks
@@ -371,7 +378,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
       return (
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-1">
-            <Label htmlFor="question-count">Number of questions</Label>
+            <Label htmlFor="question-count">Numero di domande</Label>
             <Input
               id="question-count"
               type="number"
@@ -382,19 +389,19 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             />
           </div>
           <div className="space-y-1">
-            <Label>Difficulty</Label>
+            <Label>Difficoltà</Label>
             <Select
               value={settings.difficulty}
               onValueChange={(value: GenerationSettings['difficulty']) => handleSettingChange('difficulty', value)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Mixed" />
+                <SelectValue placeholder="Misto" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="beginner">Beginner</SelectItem>
-                <SelectItem value="intermediate">Intermediate</SelectItem>
-                <SelectItem value="advanced">Advanced</SelectItem>
-                <SelectItem value="mixed">Mixed</SelectItem>
+                <SelectItem value="beginner">Principiante</SelectItem>
+                <SelectItem value="intermediate">Intermedio</SelectItem>
+                <SelectItem value="advanced">Avanzato</SelectItem>
+                <SelectItem value="mixed">Misto</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -405,7 +412,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
       return (
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-1">
-            <Label htmlFor="card-count">Number of cards</Label>
+            <Label htmlFor="card-count">Numero di carte</Label>
             <Input
               id="card-count"
               type="number"
@@ -416,16 +423,16 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             />
           </div>
           <div className="space-y-1">
-            <Label>Tone</Label>
+            <Label>Tono</Label>
             <Select value={settings.tone} onValueChange={(value: GenerationSettings['tone']) => handleSettingChange('tone', value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Neutral" />
+                <SelectValue placeholder="Neutro" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="neutral">Neutral</SelectItem>
-                <SelectItem value="motivational">Motivational</SelectItem>
-                <SelectItem value="formal">Formal</SelectItem>
-                <SelectItem value="playful">Playful</SelectItem>
+                <SelectItem value="neutral">Neutro</SelectItem>
+                <SelectItem value="motivational">Motivazionale</SelectItem>
+                <SelectItem value="formal">Formale</SelectItem>
+                <SelectItem value="playful">Giocoso</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -455,7 +462,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="axis-count">Evaluation axes</Label>
+            <Label htmlFor="axis-count">Assi di valutazione</Label>
             <Input
               id="axis-count"
               type="number"
@@ -467,7 +474,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             <p className="text-[11px] text-muted-foreground">Suggerito: 3 assi per mantenere la valutazione chiara.</p>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="peer-visibility">Peer endorsement</Label>
+            <Label htmlFor="peer-visibility">Endorsement dei pari</Label>
             <Select
               value={settings.peerVisibility}
               onValueChange={(value: GenerationSettings['peerVisibility']) =>
@@ -475,7 +482,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Team" />
+                <SelectValue placeholder="Seleziona visibilità" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="private">Nessun endorsement</SelectItem>
@@ -520,7 +527,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
     return (
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1">
-          <Label htmlFor="node-count">Decision points</Label>
+          <Label htmlFor="node-count">Punti decisionali</Label>
           <Input
             id="node-count"
             type="number"
@@ -529,16 +536,16 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             value={settings.nodeCount}
             onChange={(event) => handleSettingChange('nodeCount', Number(event.target.value) || DEFAULT_SETTINGS.nodeCount)}
           />
-          <p className="text-[11px] text-muted-foreground">Recommended range: 4–6 decision nodes.</p>
+          <p className="text-[11px] text-muted-foreground">Intervallo consigliato: 4–6 nodi decisionali.</p>
         </div>
         <div className="space-y-1">
-          <Label>Risk profile</Label>
+          <Label>Profilo di rischio</Label>
           <Select
             value={settings.riskProfile}
             onValueChange={(value) => handleSettingChange('riskProfile', value as GenerationSettings['riskProfile'])}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Balanced" />
+              <SelectValue placeholder="Bilanciato" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="prudente">Prudente · privilegia la sicurezza</SelectItem>
@@ -548,24 +555,24 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
           </Select>
         </div>
         <div className="space-y-1">
-          <Label>Tone</Label>
+          <Label>Tono</Label>
           <Select value={settings.tone} onValueChange={(value: GenerationSettings['tone']) => handleSettingChange('tone', value)}>
             <SelectTrigger>
-              <SelectValue placeholder="Neutral" />
+              <SelectValue placeholder="Neutro" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="neutral">Neutral</SelectItem>
-              <SelectItem value="motivational">Motivational</SelectItem>
-              <SelectItem value="formal">Formal</SelectItem>
-              <SelectItem value="playful">Playful</SelectItem>
+              <SelectItem value="neutral">Neutro</SelectItem>
+              <SelectItem value="motivational">Motivazionale</SelectItem>
+              <SelectItem value="formal">Formale</SelectItem>
+              <SelectItem value="playful">Giocoso</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1 md:col-span-2">
-          <Label htmlFor="focus-competency">Competency focus</Label>
+          <Label htmlFor="focus-competency">Competenza chiave</Label>
           <Input
             id="focus-competency"
-            placeholder="E.g. gestione del cliente, leadership, compliance"
+            placeholder="Es. gestione del cliente, leadership, compliance"
             value={settings.focusCompetency}
             onChange={(event) => handleSettingChange('focusCompetency', event.target.value)}
           />
@@ -580,7 +587,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Badge variant="outline" className={statusBadgeClass}>
-              {status.toLowerCase()}
+              {STATUS_LABELS[status as GamificationStatus] ?? status}
             </Badge>
             <Badge variant="secondary" className="gap-1">
               <ResolvedContentIcon className="h-3 w-3" /> {contentLabel}
@@ -588,10 +595,10 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
           </div>
           <Button variant="ghost" size="sm" onClick={() => void loadDocuments()} disabled={isLoadingDocs}>
             <RefreshCw className={`mr-2 h-3.5 w-3.5 ${isLoadingDocs ? 'animate-spin' : ''}`} />
-            Refresh docs
+            Aggiorna documenti
           </Button>
         </div>
-        <CardTitle className="text-base font-semibold tracking-tight">AI Gamification Studio</CardTitle>
+        <CardTitle className="text-base font-semibold tracking-tight">Gamification Studio AI</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {contentType === 'SCENARIO' ? (
@@ -618,7 +625,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
           </div>
         ) : contentType === 'ARENA' ? (
           <div className="rounded-lg border border-[#2F90B9]/30 bg-[#2F90B9]/5 p-4 text-xs leading-relaxed text-slate-600">
-            <p className="mb-2 text-sm font-semibold text-[#1b6584]">Practice Arena – cosa ottieni</p>
+            <p className="mb-2 text-sm font-semibold text-[#1b6584]">Arena di pratica – cosa ottieni</p>
             <ul className="list-disc space-y-1 pl-4">
               <li>
                 L&apos;AI propone uno scenario operativo post-capitolo e chiede ai learner un piano d&apos;azione sintetico da iterare.
@@ -655,7 +662,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             onClick={() => setContentType('FLASHCARDS')}
             disabled={isGenerating}
           >
-            <FileText className="mr-2 h-4 w-4" /> Flashcards
+            <FileText className="mr-2 h-4 w-4" /> Flashcard
           </Button>
           <Button
             type="button"
@@ -673,7 +680,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             onClick={() => setContentType('ARENA')}
             disabled={isGenerating}
           >
-            <Sparkles className="mr-2 h-4 w-4" /> Practice Arena
+            <Sparkles className="mr-2 h-4 w-4" /> Arena di pratica
           </Button>
         </div>
 
@@ -681,17 +688,17 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">Source documents</span>
-            <span className="text-xs text-muted-foreground">{selectedDocs.length} selected</span>
+            <span className="text-sm font-medium text-foreground">Documenti di riferimento</span>
+            <span className="text-xs text-muted-foreground">{selectedDocs.length} selezionati</span>
           </div>
 
           <div className="grid gap-2 max-h-48 overflow-y-auto rounded-md border border-border/40 bg-background/80 p-3 text-xs">
             {isLoadingDocs ? (
               <div className="flex items-center justify-center py-6 text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading documents
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Caricamento documenti
               </div>
             ) : documents.length === 0 ? (
-              <p className="text-muted-foreground">No documents uploaded yet. Add one below.</p>
+              <p className="text-muted-foreground">Nessun documento caricato. Aggiungine uno qui sotto.</p>
             ) : (
               documents.map((doc) => {
                 const isSelected = selectedDocs.includes(doc.id)
@@ -720,9 +727,9 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
 
         <div className="grid gap-3 md:grid-cols-[2fr_3fr]">
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Quick add external document</Label>
+            <Label className="text-sm font-medium">Aggiungi rapidamente un documento esterno</Label>
             <Input
-              placeholder="Document name"
+              placeholder="Nome del documento"
               value={newDoc.name}
               onChange={(event) => setNewDoc((prev) => ({ ...prev, name: event.target.value }))}
               disabled={isSavingDoc}
@@ -735,22 +742,22 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             />
             <Button type="button" variant="outline" size="sm" onClick={handleAddDocument} disabled={isSavingDoc}>
               {isSavingDoc ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-2 h-3.5 w-3.5" />}
-              Add document
+              Aggiungi documento
             </Button>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Generation settings</Label>
+            <Label className="text-sm font-medium">Impostazioni di generazione</Label>
             <div className="rounded-md border border-border/40 bg-background/70 p-3 space-y-3 text-xs">
               <p className="text-muted-foreground">
-                Configure how the assistant should craft the content. Settings adapt to the selected output type.
+                Configura come l&apos;assistente deve creare il contenuto. Le impostazioni si adattano al tipo di output scelto.
               </p>
               {contextualSettings}
               <div className="space-y-1">
-                <Label htmlFor="tone-notes">Additional instructions</Label>
+                <Label htmlFor="tone-notes">Istruzioni aggiuntive</Label>
                 <Textarea
                   id="tone-notes"
-                  placeholder="Add context, company jargon or scoring guidelines..."
+                  placeholder="Aggiungi contesto, linguaggio aziendale o linee guida di valutazione..."
                   className="h-20 text-xs"
                   value={settings.notes ?? ''}
                   onChange={(event) => setSettings((prev) => ({ ...prev, notes: event.target.value }))}
@@ -761,12 +768,12 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
         </div>
 
         <Button type="button" onClick={handleGenerate} disabled={!canGenerate} className="w-full">
-          {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}Generate with AI
+          {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}Genera con l&apos;AI
         </Button>
 
         {status === 'FAILED' && (
           <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-xs text-rose-600">
-            The last attempt failed. Update your documents or settings and try again.
+            L&apos;ultimo tentativo non è riuscito. Aggiorna documenti o impostazioni e riprova.
           </div>
         )}
 
@@ -776,12 +783,12 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               <div>
                 <p className="text-sm font-semibold text-foreground">{quizSummary.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {quizSummary.questionCount} questions · {quizSummary.pointsReward} pts reward
+                  {quizSummary.questionCount} domande · {quizSummary.pointsReward} punti assegnati
                 </p>
               </div>
               <Button asChild size="sm" variant="outline">
                 <Link href={quizManageHref}>
-                  Manage quiz
+                  Gestisci quiz
                   <ExternalLink className="ml-2 h-3 w-3" />
                 </Link>
               </Button>
@@ -794,11 +801,11 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-foreground">{flashcardDeck.title}</p>
-                <p className="text-xs text-muted-foreground">{flashcardDeck.cardCount} cards generated</p>
+                <p className="text-xs text-muted-foreground">{flashcardDeck.cardCount} carte generate</p>
               </div>
               <Button asChild size="sm" variant="outline">
                 <Link href={flashcardManageHref}>
-                  Manage flashcards
+                  Gestisci flashcard
                   <ExternalLink className="ml-2 h-3 w-3" />
                 </Link>
               </Button>
@@ -807,12 +814,12 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             <div className="space-y-2">
               {flashcardDeck.cards.slice(0, 3).map((card) => (
                 <div key={card.id} className="rounded-md border border-border/30 bg-background/60 px-3 py-2">
-                  <p className="text-[11px] font-semibold text-foreground">Q: {card.front}</p>
-                  <p className="text-[11px] text-muted-foreground">A: {card.back}</p>
+                  <p className="text-[11px] font-semibold text-foreground">D: {card.front}</p>
+                  <p className="text-[11px] text-muted-foreground">R: {card.back}</p>
                 </div>
               ))}
               {flashcardDeck.cardCount > 3 && (
-                <p className="text-[11px] text-muted-foreground">+ {flashcardDeck.cardCount - 3} more cards</p>
+                <p className="text-[11px] text-muted-foreground">+ {flashcardDeck.cardCount - 3} carte aggiuntive</p>
               )}
             </div>
           </div>
@@ -832,14 +839,14 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               </div>
               <Button asChild size="sm" variant="outline">
                 <Link href={scenarioPreviewHref}>
-                  Preview learner view
+                  Anteprima vista learner
                   <ExternalLink className="ml-2 h-3 w-3" />
                 </Link>
               </Button>
             </div>
             <Separator />
             <div className="space-y-2">
-              <p className="text-[11px] font-semibold text-foreground">Objectives</p>
+              <p className="text-[11px] font-semibold text-foreground">Obiettivi</p>
               <div className="space-y-1">
                 {(scenarioSummary.objectives ?? []).slice(0, 3).map((objective, index) => (
                   <p key={`${objective}-${index}`} className="text-[11px] text-muted-foreground">
@@ -847,12 +854,12 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
                   </p>
                 ))}
                 {scenarioSummary.objectives && scenarioSummary.objectives.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground">Objectives provided by the AI will appear here.</p>
+                  <p className="text-[11px] text-muted-foreground">Gli obiettivi generati dall&apos;AI compariranno qui.</p>
                 ) : null}
               </div>
               {scenarioSummary.objectives && scenarioSummary.objectives.length > 3 ? (
                 <p className="text-[11px] text-muted-foreground">
-                  + {scenarioSummary.objectives.length - 3} additional learning goals
+                  + {scenarioSummary.objectives.length - 3} obiettivi formativi aggiuntivi
                 </p>
               ) : null}
             </div>
@@ -865,7 +872,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               <div>
                 <p className="text-sm font-semibold text-foreground line-clamp-2">{arenaSummary.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {arenaSummary.axes} axes · ruolo learner: {arenaSummary.learnerRole}
+                  {arenaSummary.axes} assi · ruolo learner: {arenaSummary.learnerRole}
                   {typeof arenaSummary.estimatedDurationMinutes === 'number'
                     ? ` · ~${arenaSummary.estimatedDurationMinutes} min`
                     : ''}
@@ -873,7 +880,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
               </div>
               <Button asChild size="sm" variant="outline">
                 <Link href={arenaPreviewHref}>
-                  Preview learner view
+                  Anteprima vista learner
                   <ExternalLink className="ml-2 h-3 w-3" />
                 </Link>
               </Button>
@@ -881,11 +888,11 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
             <Separator />
             <div className="grid gap-2 md:grid-cols-2">
               <div>
-                <p className="text-[11px] font-semibold text-foreground">Learning goals</p>
-                <p className="text-[11px] text-muted-foreground">{arenaSummary.objectives} key outcomes</p>
+                <p className="text-[11px] font-semibold text-foreground">Obiettivi di apprendimento</p>
+                <p className="text-[11px] text-muted-foreground">{arenaSummary.objectives} risultati chiave</p>
               </div>
               <div>
-                <p className="text-[11px] font-semibold text-foreground">AI coach focus</p>
+                <p className="text-[11px] font-semibold text-foreground">Focus del coach AI</p>
                 <p className="text-[11px] text-muted-foreground">
                   Iterazioni tracciate e Insight Tokens assegnati in automatico.
                 </p>

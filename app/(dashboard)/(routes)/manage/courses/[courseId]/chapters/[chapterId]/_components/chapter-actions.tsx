@@ -25,15 +25,15 @@ export const ChapterActions = ({ disabled, courseId, chapterId, isPublished }: C
 
       if (isPublished) {
         await axios.patch(`/api/courses/${courseId}/chapters/${chapterId}/unpublish`)
-        toast.success('Chapter unpublished')
+        toast.success('Capitolo non più pubblicato')
       } else {
         await axios.patch(`/api/courses/${courseId}/chapters/${chapterId}/publish`)
-        toast.success('Chapter published')
+        toast.success('Capitolo pubblicato')
       }
 
       router.refresh()
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Si è verificato un errore')
     } finally {
       setIsLoading(false)
     }
@@ -45,11 +45,11 @@ export const ChapterActions = ({ disabled, courseId, chapterId, isPublished }: C
 
       await axios.delete(`/api/courses/${courseId}/chapters/${chapterId}`)
 
-      toast.success('Chapter deleted')
+      toast.success('Capitolo eliminato')
       router.refresh()
       router.push(`/manage/courses/${courseId}`)
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Si è verificato un errore')
     } finally {
       setIsLoading(false)
     }
@@ -58,7 +58,7 @@ export const ChapterActions = ({ disabled, courseId, chapterId, isPublished }: C
   return (
     <div className="flex items-center gap-x-2">
       <Button onClick={onClick} disabled={disabled || isLoading} variant="outline" size="sm">
-        {isPublished ? 'Unpublish' : 'Publish'}
+        {isPublished ? 'Rimuovi pubblicazione' : 'Pubblica'}
       </Button>
       <ConfirmModal onConfirm={onDelete}>
         <Button size="sm" disabled={isLoading}>

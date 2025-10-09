@@ -37,11 +37,11 @@ export const AttachmentForm = ({ initialData, courseId }: AttachmentFormProps) =
     try {
       formSchema.parse(values)
       await axios.post(`/api/courses/${courseId}/attachments`, values)
-      toast.success('Course updated')
+      toast.success('Corso aggiornato')
       toggleEdit()
       router.refresh()
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Si è verificato un errore')
     }
   }
 
@@ -49,10 +49,10 @@ export const AttachmentForm = ({ initialData, courseId }: AttachmentFormProps) =
     try {
       setDeletingId(id)
       await axios.delete(`/api/courses/${courseId}/attachments/${id}`)
-      toast.success('Attachment deleted')
+      toast.success('Allegato eliminato')
       router.refresh()
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Si è verificato un errore')
     } finally {
       setDeletingId(null)
     }
@@ -73,13 +73,13 @@ export const AttachmentForm = ({ initialData, courseId }: AttachmentFormProps) =
   return (
     <div className="rounded-xl border border-dashed border-border/70 bg-card/80 p-6 shadow-sm transition-colors hover:border-primary/40">
       <div className="flex items-center justify-between font-medium">
-        Course attachments
+        Allegati del corso
         <Button onClick={toggleEdit} variant="ghost">
-          {isEditing && <>Cancel</>}
+          {isEditing && <>Annulla</>}
           {!isEditing && (
             <>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add a file
+              Aggiungi un file
             </>
           )}
         </Button>
@@ -87,7 +87,7 @@ export const AttachmentForm = ({ initialData, courseId }: AttachmentFormProps) =
       {!isEditing && (
         <>
           {attachments.length === 0 && (
-            <p className="mt-4 text-sm italic text-muted-foreground">No attachments yet</p>
+            <p className="mt-4 text-sm italic text-muted-foreground">Ancora nessun allegato</p>
           )}
           {attachments.length > 0 && (
             <div className="space-y-2">
@@ -138,7 +138,7 @@ export const AttachmentForm = ({ initialData, courseId }: AttachmentFormProps) =
             }}
           />
           <div className="mt-4 text-xs text-muted-foreground">
-            Add anything your students might need to complete the course.
+            Aggiungi tutto ciò che serve ai learner per completare il corso.
           </div>
         </div>
       )}

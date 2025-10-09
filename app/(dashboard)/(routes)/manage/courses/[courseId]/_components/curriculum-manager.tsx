@@ -161,6 +161,9 @@ const normalizeNullable = (value?: string) => {
   return trimmed.length > 0 ? trimmed : null
 }
 
+const formatCountLabel = (count: number, singular: string, plural: string) =>
+  `${count} ${count === 1 ? singular : plural}`
+
 export const CurriculumManager = ({ courseId, modules, onModulesChange }: CurriculumManagerProps) => {
   const [newModuleTitle, setNewModuleTitle] = useState('')
   const [isAddingModule, setIsAddingModule] = useState(false)
@@ -384,11 +387,11 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
       })
       const newModule = mapModuleFromDb(response.data)
       onModulesChange((prev) => [...prev, newModule])
-      toast.success('Module created')
+      toast.success('Modulo creato')
       setNewModuleTitle('')
       setIsAddingModule(false)
     } catch {
-      toast.error('Unable to create module')
+      toast.error('Impossibile creare il modulo')
     } finally {
       setIsCreatingModule(false)
     }
@@ -411,7 +414,7 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
         isPublished: payload.isPublished,
       })
     } catch {
-      toast.error('Unable to save module changes')
+      toast.error('Impossibile salvare le modifiche al modulo')
     }
   }
 
@@ -419,9 +422,9 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
     try {
       await axios.delete(`/api/courses/${courseId}/modules/${moduleId}`)
       removeModuleState(moduleId)
-      toast.success('Module deleted')
+      toast.success('Modulo eliminato')
     } catch {
-      toast.error('Unable to delete module')
+      toast.error('Impossibile eliminare il modulo')
     }
   }
 
@@ -430,14 +433,14 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
       const response = await axios.post<LessonPayload>(
         `/api/courses/${courseId}/modules/${moduleId}/lessons`,
         {
-          title: 'New Lesson',
+          title: 'Nuova lezione',
         },
       )
       const lesson = mapLessonFromDb(response.data)
       appendLessonState(moduleId, lesson)
-      toast.success('Lesson added')
+      toast.success('Lezione aggiunta')
     } catch {
-      toast.error('Unable to create lesson')
+      toast.error('Impossibile creare la lezione')
     }
   }
 
@@ -463,7 +466,7 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
         isPublished: payload.isPublished,
       })
     } catch {
-      toast.error('Unable to save lesson changes')
+      toast.error('Impossibile salvare le modifiche alla lezione')
     }
   }
 
@@ -471,9 +474,9 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
     try {
       await axios.delete(`/api/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}`)
       removeLessonState(moduleId, lessonId)
-      toast.success('Lesson deleted')
+      toast.success('Lezione eliminata')
     } catch {
-      toast.error('Unable to delete lesson')
+      toast.error('Impossibile eliminare la lezione')
     }
   }
 
@@ -489,21 +492,21 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
           type,
           title:
             type === 'VIDEO_LESSON'
-              ? 'New Video Lesson'
+              ? 'Nuova lezione video'
               : type === 'RESOURCES'
-                ? 'New Resources'
+                ? 'Nuovo blocco risorse'
                 : type === 'QUIZ'
-                  ? 'New Quiz'
+                  ? 'Nuovo quiz'
                   : type === 'GAMIFICATION'
-                    ? 'New Gamification'
+                    ? 'Nuovo blocco gamification'
                     : 'Aula virtuale BigBlueButton',
         },
       )
       const block = mapBlockFromDb(response.data)
       appendBlockState(moduleId, lessonId, block)
-      toast.success('Content block added')
+      toast.success('Blocco di contenuto aggiunto')
     } catch {
-      toast.error('Unable to add content block')
+      toast.error('Impossibile aggiungere il blocco di contenuto')
     }
   }
 
@@ -529,9 +532,9 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
       )
       const attachment = mapAttachmentFromDb(response.data)
       appendBlockAttachmentState(moduleId, lessonId, blockId, attachment)
-      toast.success('Resource added')
+      toast.success('Risorsa aggiunta')
     } catch {
-      toast.error('Unable to add file')
+      toast.error('Impossibile aggiungere il file')
     }
   }
 
@@ -546,9 +549,9 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
         `/api/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}/blocks/${blockId}/attachments/${attachmentId}`
       )
       removeBlockAttachmentState(moduleId, lessonId, blockId, attachmentId)
-      toast.success('Resource removed')
+      toast.success('Risorsa rimossa')
     } catch {
-      toast.error('Unable to delete resource')
+      toast.error('Impossibile eliminare la risorsa')
     }
   }
 
@@ -593,7 +596,7 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
         },
       )
     } catch {
-      toast.error('Unable to save block changes')
+      toast.error('Impossibile salvare le modifiche al blocco')
     }
   }
 
@@ -603,9 +606,9 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
         `/api/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}/blocks/${blockId}`,
       )
       removeBlockState(moduleId, lessonId, blockId)
-      toast.success('Block deleted')
+      toast.success('Blocco eliminato')
     } catch {
-      toast.error('Unable to delete block')
+      toast.error('Impossibile eliminare il blocco')
     }
   }
 
@@ -621,17 +624,17 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Course Structure</h2>
+          <h2 className="text-xl font-semibold text-foreground">Struttura del corso</h2>
           <p className="text-sm text-muted-foreground">
-            Organize your content into modules and lessons with different content types.
+            Organizza i contenuti in moduli e lezioni con tipologie differenti.
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{modules.length} modules</span>
+          <span>{formatCountLabel(modules.length, 'modulo', 'moduli')}</span>
           <span>•</span>
-          <span>{totalLessons} lessons</span>
+          <span>{formatCountLabel(totalLessons, 'lezione', 'lezioni')}</span>
           <span>•</span>
-          <span>{totalBlocks} blocks</span>
+          <span>{formatCountLabel(totalBlocks, 'blocco', 'blocchi')}</span>
         </div>
       </div>
 
@@ -640,10 +643,10 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <FolderOpen className="h-4 w-4" />
-            Add New Module
+            Aggiungi un nuovo modulo
           </CardTitle>
           <CardDescription>
-            Modules group related lessons together. Start by creating your first module.
+            I moduli raggruppano lezioni correlate. Inizia creando il primo modulo.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -652,7 +655,7 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
               <Input
                 value={newModuleTitle}
                 onChange={(e) => setNewModuleTitle(e.target.value)}
-                placeholder="Module title..."
+                placeholder="Titolo del modulo..."
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     void handleAddModule()
@@ -665,7 +668,7 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
                 disabled={isCreatingModule}
               />
               <Button onClick={handleAddModule} disabled={!newModuleTitle.trim() || isCreatingModule}>
-                {isCreatingModule ? 'Adding…' : 'Add'}
+                {isCreatingModule ? 'Aggiunta in corso…' : 'Aggiungi'}
               </Button>
               <Button
                 variant="outline"
@@ -675,13 +678,13 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
                 }}
                 disabled={isCreatingModule}
               >
-                Cancel
+                Annulla
               </Button>
             </div>
           ) : (
             <Button onClick={() => setIsAddingModule(true)} className="w-full">
               <Plus className="h-4 w-4 mr-2" />
-              Create Module
+              Crea modulo
             </Button>
           )}
         </CardContent>
@@ -693,13 +696,13 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
           <Card className="border-border/60 bg-muted/30">
             <CardContent className="flex flex-col items-center justify-center py-8">
               <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No modules yet</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Ancora nessun modulo</h3>
               <p className="text-sm text-muted-foreground text-center mb-4">
-                Create your first module to start organizing your course content.
+                Crea il primo modulo per iniziare a organizzare i contenuti del corso.
               </p>
               <Button onClick={() => setIsAddingModule(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Create First Module
+                Crea il primo modulo
               </Button>
             </CardContent>
           </Card>
@@ -730,38 +733,38 @@ export const CurriculumManager = ({ courseId, modules, onModulesChange }: Curric
       {/* Help Card */}
       <Card className="border-border/60 bg-muted/30">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">How it works</CardTitle>
+          <CardTitle className="text-base">Come funziona</CardTitle>
           <CardDescription>
-            Build your course structure step by step with this intuitive interface.
+            Costruisci la struttura del corso passo dopo passo con questa interfaccia intuitiva.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <div className="flex items-start gap-3">
             <FolderOpen className="h-4 w-4 mt-0.5 text-primary" />
             <div>
-              <p className="font-medium text-foreground">Modules</p>
-              <p>Group related lessons together. Think of them as chapters in your course.</p>
+              <p className="font-medium text-foreground">Moduli</p>
+              <p>Raggruppa lezioni correlate, come fossero capitoli del tuo corso.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <BookOpen className="h-4 w-4 mt-0.5 text-primary" />
             <div>
-              <p className="font-medium text-foreground">Lessons</p>
-              <p>Individual learning units within each module. Each lesson can contain multiple content blocks.</p>
+              <p className="font-medium text-foreground">Lezioni</p>
+              <p>Unità formative all'interno di ogni modulo, ognuna con più blocchi di contenuto.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Video className="h-4 w-4 mt-0.5 text-primary" />
             <div>
-              <p className="font-medium text-foreground">Video Lessons</p>
-              <p>Upload videos or add streaming links. Perfect for presentations, tutorials, and demonstrations.</p>
+              <p className="font-medium text-foreground">Lezioni video</p>
+              <p>Carica video o aggiungi link di streaming: perfetto per presentazioni, tutorial e demo.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <FileText className="h-4 w-4 mt-0.5 text-primary" />
             <div>
-              <p className="font-medium text-foreground">Resources</p>
-              <p>Add documents, PDFs, links, and other supplementary materials to support learning.</p>
+              <p className="font-medium text-foreground">Risorse</p>
+              <p>Aggiungi documenti, PDF, link e altri materiali di supporto.</p>
             </div>
           </div>
         </CardContent>
