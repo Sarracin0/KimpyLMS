@@ -175,8 +175,8 @@ export function PracticeArenaPlayer({ blockId, arena, attempts, contextConfig }:
       </Card>
 
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(300px,380px)]">
-        <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-12">
+        <div className="lg:col-span-8 space-y-6">
       <Card className="border border-border/60 bg-card/80 shadow-sm">
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
@@ -229,61 +229,6 @@ export function PracticeArenaPlayer({ blockId, arena, attempts, contextConfig }:
         </CardContent>
       </Card>
 
-      {lastEvaluation ? (
-        <Card className="border border-border/60 bg-card/80 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="h-4 w-4 text-primary" /> Coaching personalizzato
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Punteggio complessivo</p>
-              <div className="flex items-center gap-3">
-                <div className="w-full max-w-[220px]">
-                  <Progress value={overallScore} className="h-2" />
-                  <p className="mt-1 text-xs text-muted-foreground">{overallScore}/100</p>
-                </div>
-                <Badge variant="secondary">
-                  {scoreDelta >= 0 ? '+' : ''}{scoreDelta} vs ultimo tentativo
-                </Badge>
-                <Badge variant="secondary">Tokens: {tokensAwarded}</Badge>
-              </div>
-            </div>
-            <Separator />
-            <div className="grid gap-3 md:grid-cols-2">
-              {evaluationAxes.map((axis) => (
-                <div key={axis.axisId} className="rounded-md border border-border/50 bg-background/70 p-3 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{axis.label}</span>
-                    <span className="text-muted-foreground">{axis.score}/100</span>
-                  </div>
-                  <Progress value={axis.score} className="mt-2 h-2" />
-                  {axis.evidence ? (
-                    <p className="mt-2 text-[11px] text-muted-foreground">{axis.evidence}</p>
-                  ) : null}
-                  {axis.suggestion ? (
-                    <p className="mt-1 text-[11px]">Suggerimento: {axis.suggestion}</p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-            <Separator />
-            {lastEvaluation.summary ? (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">Sintesi coach</p>
-                <p className="mt-1 text-sm">{lastEvaluation.summary}</p>
-              </div>
-            ) : null}
-            {lastEvaluation.improvementAdvice ? (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">Prossimo step suggerito</p>
-                <p className="mt-1 text-sm">{lastEvaluation.improvementAdvice}</p>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : null}
 
       <Card className="border border-border/60 bg-card/80 shadow-sm">
         <CardHeader>
@@ -322,9 +267,9 @@ export function PracticeArenaPlayer({ blockId, arena, attempts, contextConfig }:
             })
           )}
         </CardContent>
-      </Card>
+        </Card>
         </div>
-        <div className="space-y-6">
+        <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-20">
           <Card className="border border-border/60 bg-card/80 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">Dettagli</CardTitle>
@@ -406,6 +351,61 @@ export function PracticeArenaPlayer({ blockId, arena, attempts, contextConfig }:
               </Accordion>
             </CardContent>
           </Card>
+          {lastEvaluation ? (
+            <Card className="border border-border/60 bg-card/80 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Sparkles className="h-4 w-4 text-primary" /> Coaching personalizzato
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Punteggio complessivo</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-full max-w-[220px]">
+                  <Progress value={overallScore} className="h-2" variant="brand" />
+                      <p className="mt-1 text-xs text-muted-foreground">{overallScore}/100</p>
+                    </div>
+                    <Badge variant="secondary">
+                      {scoreDelta >= 0 ? '+' : ''}{scoreDelta} vs ultimo tentativo
+                    </Badge>
+                    <Badge variant="secondary">Tokens: {tokensAwarded}</Badge>
+                  </div>
+                </div>
+                <Separator />
+                <div className="space-y-3">
+                  {evaluationAxes.map((axis) => (
+                    <div key={axis.axisId} className="rounded-md border border-border/50 bg-background/70 p-3 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{axis.label}</span>
+                        <span className="text-muted-foreground">{axis.score}/100</span>
+                      </div>
+                      <Progress value={axis.score} className="mt-2 h-2" variant="brand" />
+                      {axis.evidence ? (
+                        <p className="mt-2 text-[11px] text-muted-foreground">{axis.evidence}</p>
+                      ) : null}
+                      {axis.suggestion ? (
+                        <p className="mt-1 text-[11px]">Suggerimento: {axis.suggestion}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                <Separator />
+                {lastEvaluation.summary ? (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Sintesi coach</p>
+                    <p className="mt-1 text-sm">{lastEvaluation.summary}</p>
+                  </div>
+                ) : null}
+                {lastEvaluation.improvementAdvice ? (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Prossimo step suggerito</p>
+                    <p className="mt-1 text-sm">{lastEvaluation.improvementAdvice}</p>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       </div>
     </div>

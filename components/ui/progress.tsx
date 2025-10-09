@@ -11,6 +11,7 @@ const progressVariants = cva('h-full w-full flex-1 bg-primary transition-all', {
     variant: {
       default: 'bg-sky-600',
       success: 'bg-[#5D62E1]',
+      brand: 'bg-primary',
     },
   },
   defaultVariants: {
