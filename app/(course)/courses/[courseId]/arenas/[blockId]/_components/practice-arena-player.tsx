@@ -181,15 +181,32 @@ export function PracticeArenaPlayer({ blockId, arena, attempts, contextConfig }:
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle className="text-base">Il tuo piano d&apos;azione</CardTitle>
-            <p className="text-xs text-muted-foreground">Scrivi un piano concreto (max 300 parole) e poi miglioralo con il feedback AI.</p>
+            <p className="text-xs text-muted-foreground">Scrivi il piano (max 300 parole), poi miglioralo con il feedback.</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Badge variant="outline">{planWordCount} parole</Badge>
-            <Button type="button" variant="ghost" size="xs" onClick={reUseLastPlan} disabled={!latestPlan}>
-              <Repeat className="mr-1 h-3 w-3" /> Riprendi ultimo piano
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={reUseLastPlan}
+              disabled={!latestPlan}
+              aria-label="Riprendi ultimo piano"
+              title="Riprendi ultimo piano"
+              className="transition-colors"
+            >
+              <Repeat className="h-4 w-4" />
             </Button>
-            <Button type="button" variant="ghost" size="xs" onClick={resetDraft}>
-              <PenSquare className="mr-1 h-3 w-3" /> Nuovo foglio
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={resetDraft}
+              aria-label="Nuovo foglio"
+              title="Nuovo foglio"
+              className="transition-colors"
+            >
+              <PenSquare className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
@@ -213,53 +230,55 @@ export function PracticeArenaPlayer({ blockId, arena, attempts, contextConfig }:
       </Card>
 
       {lastEvaluation ? (
-        <Card className="border border-emerald-600/40 bg-emerald-50">
+        <Card className="border border-border/60 bg-card/80 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base text-emerald-900">
-              <Sparkles className="h-4 w-4" /> Coaching personalizzato
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="h-4 w-4 text-primary" /> Coaching personalizzato
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase text-emerald-900/80">Punteggio complessivo</p>
+              <p className="text-xs font-medium text-muted-foreground">Punteggio complessivo</p>
               <div className="flex items-center gap-3">
                 <div className="w-full max-w-[220px]">
                   <Progress value={overallScore} className="h-2" />
-                  <p className="mt-1 text-xs text-emerald-900/80">{overallScore}/100</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{overallScore}/100</p>
                 </div>
-                <Badge variant="secondary" className="bg-white text-emerald-900">
+                <Badge variant="secondary">
                   {scoreDelta >= 0 ? '+' : ''}{scoreDelta} vs ultimo tentativo
                 </Badge>
-                <Badge variant="secondary" className="bg-white text-emerald-900">
-                  Tokens guadagnati: {tokensAwarded}
-                </Badge>
+                <Badge variant="secondary">Tokens: {tokensAwarded}</Badge>
               </div>
             </div>
-            <Separator className="bg-emerald-200" />
+            <Separator />
             <div className="grid gap-3 md:grid-cols-2">
               {evaluationAxes.map((axis) => (
-                <div key={axis.axisId} className="rounded-md border border-emerald-200 bg-white/60 p-3 text-xs text-emerald-900">
+                <div key={axis.axisId} className="rounded-md border border-border/50 bg-background/70 p-3 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold">{axis.label}</span>
-                    <span>{axis.score}/100</span>
+                    <span className="font-medium">{axis.label}</span>
+                    <span className="text-muted-foreground">{axis.score}/100</span>
                   </div>
                   <Progress value={axis.score} className="mt-2 h-2" />
-                  {axis.evidence ? <p className="mt-2 text-[11px]">{axis.evidence}</p> : null}
-                  {axis.suggestion ? <p className="mt-1 text-[11px] text-emerald-700">Suggerimento: {axis.suggestion}</p> : null}
+                  {axis.evidence ? (
+                    <p className="mt-2 text-[11px] text-muted-foreground">{axis.evidence}</p>
+                  ) : null}
+                  {axis.suggestion ? (
+                    <p className="mt-1 text-[11px]">Suggerimento: {axis.suggestion}</p>
+                  ) : null}
                 </div>
               ))}
             </div>
-            <Separator className="bg-emerald-200" />
+            <Separator />
             {lastEvaluation.summary ? (
               <div>
-                <p className="text-xs font-semibold uppercase text-emerald-900/80">Sintesi coach</p>
-                <p className="mt-1 text-sm text-emerald-900">{lastEvaluation.summary}</p>
+                <p className="text-xs font-medium text-muted-foreground">Sintesi coach</p>
+                <p className="mt-1 text-sm">{lastEvaluation.summary}</p>
               </div>
             ) : null}
             {lastEvaluation.improvementAdvice ? (
               <div>
-                <p className="text-xs font-semibold uppercase text-emerald-900/80">Prossimo step suggerito</p>
-                <p className="mt-1 text-sm text-emerald-900">{lastEvaluation.improvementAdvice}</p>
+                <p className="text-xs font-medium text-muted-foreground">Prossimo step suggerito</p>
+                <p className="mt-1 text-sm">{lastEvaluation.improvementAdvice}</p>
               </div>
             ) : null}
           </CardContent>
@@ -268,7 +287,7 @@ export function PracticeArenaPlayer({ blockId, arena, attempts, contextConfig }:
 
       <Card className="border border-border/60 bg-card/80 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">Cronologia tentativi</CardTitle>
+          <CardTitle className="text-base">Cronologia</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-xs text-muted-foreground">
           {attempts.length === 0 ? (
@@ -279,22 +298,25 @@ export function PracticeArenaPlayer({ blockId, arena, attempts, contextConfig }:
               const date = new Date(attempt.createdAt)
               const endorsementCount = reflections?.endorsements?.length ?? 0
               return (
-                <div key={attempt.id} className="rounded-md border border-border/40 bg-background/70 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-foreground">
-                    <span className="font-semibold">Tentativo del {new Intl.DateTimeFormat('it', { dateStyle: 'medium', timeStyle: 'short' }).format(date)}</span>
-                    <div className="flex items-center gap-2 text-xs">
-                      <Badge variant="outline">Score {attempt.score}/100</Badge>
-                      <Badge variant="outline">Tokens {attempt.insightTokens}</Badge>
-                      {endorsementCount > 0 ? (
-                        <Badge variant="secondary">Endorsement {endorsementCount}</Badge>
-                      ) : null}
+                <div key={attempt.id} className="relative border-l border-border/50 pl-4">
+                  <span className="absolute -left-1 top-3 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
+                  <div className="rounded-md border border-border/40 bg-background/70 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-foreground">
+                      <span className="font-medium">{new Intl.DateTimeFormat('it', { dateStyle: 'medium', timeStyle: 'short' }).format(date)}</span>
+                      <div className="flex items-center gap-2 text-xs">
+                        <Badge variant="outline">Score {attempt.score}/100</Badge>
+                        <Badge variant="outline">Tokens {attempt.insightTokens}</Badge>
+                        {endorsementCount > 0 ? (
+                          <Badge variant="secondary">Endorsement {endorsementCount}</Badge>
+                        ) : null}
+                      </div>
                     </div>
+                    {reflections?.evaluation?.summary ? (
+                      <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                        {reflections.evaluation.summary}
+                      </p>
+                    ) : null}
                   </div>
-                  {reflections?.evaluation?.summary ? (
-                    <p className="mt-2 text-xs">
-                      {reflections.evaluation.summary}
-                    </p>
-                  ) : null}
                 </div>
               )
             })
