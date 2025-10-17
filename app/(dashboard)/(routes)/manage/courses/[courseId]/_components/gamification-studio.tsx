@@ -332,6 +332,7 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
       }
 
       const nextBlock = buildNextBlock(payload)
+      const nextContentType = (nextBlock.gamification?.contentType as StudioContentType | undefined) ?? contentType
       if (process.env.NODE_ENV !== 'production') {
         console.groupCollapsed('[GamificationStudio] handleGenerate result');
         console.log('API payload block', payload);
@@ -339,7 +340,6 @@ export const GamificationStudio = ({ courseId, moduleId, lessonId, block, onRepl
         console.log('next content type', nextContentType);
         console.groupEnd();
       }
-      const nextContentType = (nextBlock.gamification?.contentType as StudioContentType | undefined) ?? contentType
       setContentType(nextContentType)
       setSelectedDocs(nextBlock.gamification?.sourceAttachmentIds ?? [])
       onReplaceBlock(moduleId, lessonId, block.id, nextBlock)

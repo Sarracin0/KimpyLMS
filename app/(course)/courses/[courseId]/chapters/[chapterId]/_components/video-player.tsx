@@ -27,6 +27,7 @@ import { useConfettiStore } from '@/hooks/use-confetti'
 import type { VideoCheckpoint } from '@/types/video'
 import { PlayerCoachPanel } from './player-coach-panel'
 import { PlayerCommentsPanel } from './player-comments-panel'
+import { QuizModal } from './quiz-modal'
 import type { HeatmapBucket, PlayerEventPayload } from './player-types'
 
 type ProgressState = {
@@ -93,6 +94,7 @@ export const VideoPlayer = ({
   const [isPlaying, setIsPlaying] = useState(!isLocked)
   const [activeCheckpointId, setActiveCheckpointId] = useState<string | null>(null)
   const [seenCheckpointIds, setSeenCheckpointIds] = useState<Set<string>>(() => new Set())
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false)
   const notesStorageKey = useMemo(() => `chapter-notes:${chapterId}`, [chapterId])
   const [notesDraft, setNotesDraft] = useState('')
   const [isNotesOpen, setIsNotesOpen] = useState(false)
@@ -201,6 +203,32 @@ export const VideoPlayer = ({
     [orderedCheckpoints, activeCheckpointId],
   )
 
+  const markerColor = (type: string) => {
+    switch (type) {
+      case 'QUIZ':
+        return 'bg-emerald-400'
+      case 'SCENARIO':
+        return 'bg-sky-400'
+      case 'ARENA':
+        return 'bg-indigo-400'
+      case 'FLASHCARDS':
+        return 'bg-orange-400'
+      default:
+        return 'bg-white/80'
+    }
+  }
+
+  const heatColor = (intensity: number) => {
+    const clamped = Math.max(0, Math.min(intensity, 1))
+    const start = [250, 204, 21]
+    const end = [239, 68, 68]
+    const r = Math.round(start[0] + (end[0] - start[0]) * clamped)
+    const g = Math.round(start[1] + (end[1] - start[1]) * clamped)
+    const b = Math.round(start[2] + (end[2] - start[2]) * clamped)
+    const alpha = 0.25 + 0.35 * clamped
+    return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(2)})`
+  }
+
   const timelineMarkers = useMemo(() => {
     if (!duration || duration <= 0) return []
     return orderedCheckpoints.map((checkpoint) => ({
@@ -230,32 +258,6 @@ export const VideoPlayer = ({
         }
       })
   }, [duration, heatmapBuckets])
-
-  const markerColor = (type: string) => {
-    switch (type) {
-      case 'QUIZ':
-        return 'bg-emerald-400'
-      case 'SCENARIO':
-        return 'bg-sky-400'
-      case 'ARENA':
-        return 'bg-indigo-400'
-      case 'FLASHCARDS':
-        return 'bg-orange-400'
-      default:
-        return 'bg-white/80'
-    }
-  }
-
-  const heatColor = (intensity: number) => {
-    const clamped = Math.max(0, Math.min(intensity, 1))
-    const start = [250, 204, 21]
-    const end = [239, 68, 68]
-    const r = Math.round(start[0] + (end[0] - start[0]) * clamped)
-    const g = Math.round(start[1] + (end[1] - start[1]) * clamped)
-    const b = Math.round(start[2] + (end[2] - start[2]) * clamped)
-    const alpha = 0.25 + 0.35 * clamped
-    return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(2)})`
-  }
 
   const flushEvents = useCallback(async () => {
     if (isLocked) {
@@ -402,6 +404,23 @@ export const VideoPlayer = ({
     markCheckpointAsSeen(activeCheckpointId)
     setActiveCheckpointId(null)
     setIsPlaying(true)
+  }
+
+  const handleOpenQuiz = (blockId: string) => {
+    setIsQuizModalOpen(true)
+  }
+
+  const handleQuizComplete = () => {
+    // When quiz is completed, mark checkpoint as seen and resume video
+    markCheckpointAsSeen(activeCheckpointId)
+    setActiveCheckpointId(null)
+    setIsQuizModalOpen(false)
+    setIsPlaying(true)
+  }
+
+  const handleQuizClose = () => {
+    // When quiz is closed without completion, keep checkpoint active
+    setIsQuizModalOpen(false)
   }
 
   const handleOpenLink = (href: string | null) => {
@@ -693,7 +712,14 @@ export const VideoPlayer = ({
               ) : null}
             </div>
             <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
-              {actionUrl && actionType !== 'MESSAGE' ? (
+              {actionType === 'QUIZ' && activeCheckpoint.action?.blockId ? (
+                <Button
+                  onClick={() => handleOpenQuiz(activeCheckpoint.action!.blockId!)}
+                  className="w-full sm:w-auto"
+                >
+                  {actionLabel}
+                </Button>
+              ) : actionUrl && actionType !== 'MESSAGE' ? (
                 <Button onClick={() => handleOpenLink(actionUrl)} className="w-full sm:w-auto">
                   {actionLabel}
                 </Button>
@@ -711,12 +737,16 @@ export const VideoPlayer = ({
                   {actionLabel}
                 </Button>
               ) : (
-                <Button variant="outline" onClick={handleResume} className="w-full sm:w-auto">
+                <Button variant="outline" onClick={handleResume} className="w-full sm:w-auto text-black">
                   Riprendi video
                 </Button>
               )}
             </div>
-            {actionType !== 'MESSAGE' ? (
+            {actionType === 'QUIZ' ? (
+              <p className="text-xs text-white/60">
+                Completa il quiz per continuare con il video.
+              </p>
+            ) : actionType !== 'MESSAGE' ? (
               <p className="text-xs text-white/60">
                 Il contenuto si apre in una nuova scheda. Torna qui quando hai terminato per continuare il video.
               </p>
@@ -802,6 +832,17 @@ export const VideoPlayer = ({
             />
           </div>
         </>
+      ) : null}
+
+      {/* Quiz Modal */}
+      {activeCheckpoint?.action?.type === 'QUIZ' && activeCheckpoint.action.blockId ? (
+        <QuizModal
+          blockId={activeCheckpoint.action.blockId}
+          courseId={courseId}
+          isOpen={isQuizModalOpen}
+          onClose={handleQuizClose}
+          onComplete={handleQuizComplete}
+        />
       ) : null}
     </div>
   )

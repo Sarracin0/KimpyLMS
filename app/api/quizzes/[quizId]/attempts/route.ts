@@ -13,9 +13,20 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ quizI
 
   const nextAttemptNumber = (quiz.attempts.length > 0 ? Math.max(...quiz.attempts.map(a => a.attemptNumber)) : 0) + 1
 
-  const maxAttempts = quiz.maxAttempts ?? Infinity
+  // If maxAttempts is null or 0, treat as unlimited
+  const maxAttempts = quiz.maxAttempts && quiz.maxAttempts > 0 ? quiz.maxAttempts : Infinity
   if (nextAttemptNumber > maxAttempts) {
-    return new NextResponse('Max attempts reached', { status: 400 })
+    return new NextResponse(
+      JSON.stringify({
+        error: 'Max attempts reached',
+        attempts: quiz.attempts.length,
+        maxAttempts: quiz.maxAttempts
+      }),
+      {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    )
   }
 
   const attempt = await db.quizAttempt.create({
