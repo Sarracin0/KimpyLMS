@@ -26,9 +26,9 @@ export default async function CourseLeaderboard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Trophy className="h-4 w-4 text-[#5D62E1]" />
-            <span>Leaderboard del corso</span>
+            <span>Classifica del corso</span>
           </div>
-          <div className="hidden text-xs text-muted-foreground md:block">Top {limit}</div>
+          <div className="hidden text-xs text-muted-foreground md:block">Prime {limit} posizioni</div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -45,7 +45,7 @@ export default async function CourseLeaderboard({
                 ) : (
                   <div className="h-6 w-6 rounded-full bg-muted" />
                 )}
-                <span className="font-semibold text-[#5D62E1]">{e.points} pts</span>
+                <span className="font-semibold text-[#5D62E1]">{e.points} punti</span>
               </div>
             )
           })}
@@ -56,7 +56,7 @@ export default async function CourseLeaderboard({
             <div className="flex items-center justify-between rounded-lg border border-white/20 bg-white/40 px-3 py-2 text-xs text-foreground backdrop-blur-md supports-[backdrop-filter]:bg-white/30">
               <span className="text-muted-foreground">Tu sei</span>
               <span className="rounded-full bg-[#5D62E1] px-2 py-0.5 font-semibold text-white">#{me.rank}</span>
-              <span className="font-semibold text-[#5D62E1]">{me.points} pts</span>
+              <span className="font-semibold text-[#5D62E1]">{me.points} punti</span>
             </div>
           ) : null
         ) : null}

@@ -354,7 +354,7 @@ return (
 }
 
 export default async function Dashboard() {
-  const { profile, company, organizationId } = await requireAuthContext()
+  const { profile, company, organizationId, displayName } = await requireAuthContext()
 
   if (!organizationId) {
     return redirect('/onboarding')
@@ -412,10 +412,6 @@ export default async function Dashboard() {
     enrollmentStatus: enrollment.status,
   }))
 
-  const userName = profile.userId.includes('_') 
-    ? profile.userId.split('_')[1] 
-    : profile.userId.split('@')[0] || 'Utente'
-
   // Calculate dynamic stats
   const totalActiveCourses = coursesInProgress.length
   const totalCompleted = completedCourses.length
@@ -439,7 +435,7 @@ export default async function Dashboard() {
         <div className="space-y-4">
           <div className="flex items-baseline gap-3">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
-              {getGreeting()}, {userName}
+              {getGreeting()}, {displayName}
             </h1>
           </div>
           <div className="flex items-center gap-6">
@@ -623,11 +619,11 @@ export default async function Dashboard() {
 <Avatar className="h-14 w-14 ring-2 ring-[#5D62E1]/20">
                     <AvatarImage src={profile.avatarUrl || undefined} />
 <AvatarFallback className="bg-[#5D62E1] text-white font-semibold text-base">
-                      {userName.substring(0, 2).toUpperCase()}
+                      {displayName.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 space-y-2">
-                    <h3 className="font-semibold text-base text-gray-900">{userName}</h3>
+                    <h3 className="font-semibold text-base text-gray-900">{displayName}</h3>
                     {profile.jobTitle && (
                       <p className="text-sm text-gray-600">{profile.jobTitle}</p>
                     )}

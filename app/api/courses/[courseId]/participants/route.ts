@@ -3,6 +3,7 @@ import { CourseEnrollmentSource, UserRole } from '@prisma/client'
 
 import { db } from '@/lib/db'
 import { requireAuthContext } from '@/lib/current-profile'
+import { buildUserDisplayNameMap, deriveDisplayNameFromIdentifier } from '@/lib/display-name'
 
 // GET - Ottieni tutti i partecipanti del corso
 export async function GET(
@@ -46,6 +47,10 @@ export async function GET(
       orderBy: { createdAt: 'desc' },
     })
 
+    const userIdSet = new Set(enrollments.map((enrollment) => enrollment.userProfile.userId))
+    const displayNameMap =
+      userIdSet.size > 0 ? await buildUserDisplayNameMap(userIdSet) : new Map<string, string>()
+
     // Calcola il progresso per ogni partecipante
     const enrollmentsWithProgress = await Promise.all(
       enrollments.map(async (enrollment) => {
@@ -74,6 +79,12 @@ export async function GET(
 
         return {
           ...enrollment,
+          userProfile: {
+            ...enrollment.userProfile,
+            displayName:
+              displayNameMap.get(enrollment.userProfile.userId) ??
+              deriveDisplayNameFromIdentifier(enrollment.userProfile.userId, 'Utente'),
+          },
           progress: {
             completedChapters: completedChapters.length,
             totalChapters: publishedChapters.length,

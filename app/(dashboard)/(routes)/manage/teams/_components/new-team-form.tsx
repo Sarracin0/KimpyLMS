@@ -19,6 +19,7 @@ type AvailableMember = {
   userId: string
   jobTitle: string | null
   role: string
+  displayName: string
 }
 
 type NewTeamFormProps = {
@@ -50,9 +51,17 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return availableMembers
-    return availableMembers.filter((m) =>
-      m.userId.toLowerCase().includes(q) || (m.jobTitle ?? '').toLowerCase().includes(q),
-    )
+    return availableMembers.filter((m) => {
+      const haystack = [
+        m.displayName,
+        m.userId,
+        m.jobTitle ?? '',
+        m.role,
+      ]
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(q)
+    })
   }, [availableMembers, query])
 
   const toggle = (id: string) => {
@@ -135,7 +144,7 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca persone (id, ruolo)"
+              placeholder="Cerca persone (nome, ruolo)"
               className="h-9 focus-visible:ring-primary/40"
             />
             <Button
@@ -158,12 +167,13 @@ export const NewTeamForm = ({ availableMembers }: NewTeamFormProps) => {
                   return (
                     <li
                       key={m.id}
+                      title={m.userId}
                       className="flex items-center justify-between rounded-md border border-border/40 bg-muted/20 p-2 hover:border-primary/20 hover:bg-muted/30"
                     >
                       <div className="flex items-center gap-3">
                         <Checkbox checked={checked} onCheckedChange={() => toggle(m.id)} />
                         <div>
-                          <p className="text-sm font-medium text-foreground">{m.userId}</p>
+                          <p className="text-sm font-medium text-foreground">{m.displayName}</p>
                           <p className="text-xs text-muted-foreground">{m.jobTitle ?? m.role}</p>
                         </div>
                       </div>

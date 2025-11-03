@@ -20,6 +20,7 @@ import { Progress } from '@/components/ui/progress'
 type AvailableMember = {
   id: string
   userId: string
+  displayName: string
   role: UserRole
   jobTitle: string | null
   department: string | null
@@ -44,6 +45,7 @@ type EnrolledParticipant = {
   userProfile: {
     id: string
     userId: string
+    displayName: string
     role: UserRole
     jobTitle: string | null
     department: string | null
@@ -208,6 +210,8 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
     
     const query = searchQuery.toLowerCase()
     return members.filter(member => 
+      member.displayName.toLowerCase().includes(query) ||
+      member.userId.toLowerCase().includes(query) ||
       member.jobTitle?.toLowerCase().includes(query) ||
       member.department?.toLowerCase().includes(query)
     )
@@ -248,6 +252,8 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
     if (!enrolledSearchQuery) return participants
     const query = enrolledSearchQuery.toLowerCase()
     return participants.filter(participant => 
+      participant.userProfile.displayName.toLowerCase().includes(query) ||
+      participant.userProfile.userId.toLowerCase().includes(query) ||
       participant.userProfile.jobTitle?.toLowerCase().includes(query) ||
       participant.userProfile.department?.toLowerCase().includes(query)
     )
@@ -274,11 +280,19 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
     }
   }
 
+  const getInitials = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      return '??'
+    }
+    const parts = trimmed.split(/\s+/).slice(0, 2)
+    const letters = parts.map((part) => part.charAt(0).toUpperCase()).join('')
+    return letters || trimmed.slice(0, 2).toUpperCase()
+  }
+
   const renderMemberCard = (member: AvailableMember) => {
     const isSelected = selectedMembers.has(member.id)
-    const initials = member.jobTitle 
-      ? member.jobTitle.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
-      : member.role.slice(0, 2)
+    const initials = getInitials(member.displayName)
 
     return (
       <div
@@ -304,7 +318,7 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-medium truncate">
-              {member.jobTitle || 'Nessun titolo'}
+              {member.displayName}
             </p>
             <Badge variant={roleBadgeVariants[member.role]} className="text-xs">
               {roleLabels[member.role]}
@@ -315,9 +329,9 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
               </Badge>
             ))}
           </div>
-          {member.department && (
-            <p className="text-xs text-muted-foreground truncate">{member.department}</p>
-          )}
+          <p className="text-xs text-muted-foreground truncate">
+            {member.jobTitle ?? member.department ?? roleLabels[member.role]}
+          </p>
           <div className="flex items-center gap-3 mt-1">
             <span className="text-xs text-muted-foreground">
               {member.points} punti
@@ -333,9 +347,7 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
 
   const renderEnrolledParticipantCard = (participant: EnrolledParticipant) => {
     const { userProfile, progress, status, enrolledAt, dueDate, completedAt } = participant
-    const initials = userProfile.jobTitle 
-      ? userProfile.jobTitle.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
-      : userProfile.role.slice(0, 2)
+    const initials = getInitials(userProfile.displayName)
 
     const getStatusBadge = () => {
       switch (status) {
@@ -368,7 +380,7 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <p className="text-sm font-medium truncate">
-              {userProfile.jobTitle || 'Nessun titolo'}
+              {userProfile.displayName}
             </p>
             <Badge variant={roleBadgeVariants[userProfile.role]} className="text-xs">
               {roleLabels[userProfile.role]}
@@ -376,9 +388,9 @@ export function AddParticipantsModal({ courseId, isOpen, onClose, onSuccess }: A
             {getStatusBadge()}
           </div>
           
-          {userProfile.department && (
-            <p className="text-xs text-muted-foreground truncate mb-2">{userProfile.department}</p>
-          )}
+          <p className="text-xs text-muted-foreground truncate mb-2">
+            {userProfile.jobTitle ?? userProfile.department ?? roleLabels[userProfile.role]}
+          </p>
           
           <div className="space-y-2">
             <div className="flex items-center justify-between">

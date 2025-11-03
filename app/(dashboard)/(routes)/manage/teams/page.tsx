@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { requireAuthContext } from '@/lib/current-profile'
+import { buildUserDisplayNameMap, deriveDisplayNameFromIdentifier } from '@/lib/display-name'
 
 import { NewTeamForm } from './_components/new-team-form'
 import { TeamCard } from './_components/team-card'
@@ -28,6 +29,33 @@ export default async function ManageTeamsPage() {
     }),
   ])
 
+  const allUserIds = new Set<string>()
+  members.forEach((member) => allUserIds.add(member.userId))
+  teams.forEach((team) => {
+    team.memberships.forEach((membership) => allUserIds.add(membership.userProfile.userId))
+  })
+
+  const displayNameMap =
+    allUserIds.size > 0 ? await buildUserDisplayNameMap(allUserIds) : new Map<string, string>()
+
+  const membersWithNames = members.map((member) => ({
+    ...member,
+    displayName: displayNameMap.get(member.userId) ?? deriveDisplayNameFromIdentifier(member.userId, 'Utente'),
+  }))
+
+  const teamsWithNames = teams.map((team) => ({
+    ...team,
+    memberships: team.memberships.map((membership) => ({
+      ...membership,
+      userProfile: {
+        ...membership.userProfile,
+        displayName:
+          displayNameMap.get(membership.userProfile.userId) ??
+          deriveDisplayNameFromIdentifier(membership.userProfile.userId, 'Utente'),
+      },
+    })),
+  }))
+
   return (
     <div className="space-y-6 p-6 md:space-y-8 md:p-8">
       <div className="rounded-xl border border-primary/10 bg-primary/5 p-6">
@@ -37,11 +65,11 @@ export default async function ManageTeamsPage() {
         </p>
       </div>
 
-      <NewTeamForm availableMembers={members} />
+      <NewTeamForm availableMembers={membersWithNames} />
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {teams.map((team) => (
-          <TeamCard key={team.id} team={team} availableMembers={members} />
+        {teamsWithNames.map((team) => (
+          <TeamCard key={team.id} team={team} availableMembers={membersWithNames} />
         ))}
       </div>
 

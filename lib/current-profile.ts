@@ -4,6 +4,7 @@ import { Prisma, UserRole } from '@prisma/client'
 
 import { db } from './db'
 import { slugify } from './utils'
+import { deriveDisplayNameFromClerkUser, deriveDisplayNameFromIdentifier } from './display-name'
 
 export type AuthContext = {
   userId: string | null
@@ -11,6 +12,7 @@ export type AuthContext = {
   needsOrganization: boolean
   profile: Awaited<ReturnType<typeof db.userProfile.findUnique>>
   company: Awaited<ReturnType<typeof db.company.findUnique>>
+  displayName: string
 }
 
 type ClerkMembership = {
@@ -74,6 +76,7 @@ export async function getCurrentAuthContext() {
       needsOrganization: false,
       profile: null,
       company: null,
+      displayName: '',
     }
   }
 
@@ -88,6 +91,8 @@ export async function getCurrentAuthContext() {
   const membershipsResponse = await clerk.users.getOrganizationMembershipList({ userId })
   const memberships = membershipsResponse.data as ClerkMembership[]
 
+  let displayName = deriveDisplayNameFromClerkUser(user, '')
+
   const organizationId = orgId ?? memberships[0]?.organization?.id ?? null
 
   if (!organizationId) {
@@ -97,6 +102,7 @@ export async function getCurrentAuthContext() {
       needsOrganization: true,
       profile: null,
       company: null,
+      displayName: displayName || deriveDisplayNameFromIdentifier(userId, 'Utente'),
     }
   }
 
@@ -206,12 +212,17 @@ export async function getCurrentAuthContext() {
     }
   }
 
+  if (!displayName) {
+    displayName = deriveDisplayNameFromIdentifier(profile.userId, 'Utente')
+  }
+
   return {
     userId,
     organizationId,
     needsOrganization: false,
     profile,
     company,
+    displayName,
   }
 }
 

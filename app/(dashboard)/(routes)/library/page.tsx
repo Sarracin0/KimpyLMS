@@ -44,15 +44,15 @@ const LibraryPage = async ({ searchParams }: LibraryPageProps) => {
       </div>
       <div className="space-y-6 p-6 md:space-y-8 md:p-8">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">Learning library</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">Libreria dei corsi</h1>
           <p className="mt-1 text-sm text-muted-foreground md:text-base">
-            Browse every course available for {context.company.name} and enroll instantly.
+            Sfoglia tutti i corsi disponibili per {context.company.name} e iscriviti subito.
           </p>
         </div>
         <Categories items={categories} />
         <CoursesList
           items={courses}
-          emptyState="No courses match your filters yet. Try adjusting the category or search query."
+          emptyState="Nessun corso corrisponde ai filtri selezionati. Prova a modificare la categoria o la ricerca."
         />
       </div>
     </>

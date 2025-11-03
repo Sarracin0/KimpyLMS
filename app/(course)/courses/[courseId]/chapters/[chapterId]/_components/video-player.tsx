@@ -45,7 +45,8 @@ type FullscreenElement = HTMLElement & {
 }
 
 const ReactPlayer = dynamic(() => import('react-player'), { ssr: false })
-type ReactPlayerInstance = import('react-player').ReactPlayer
+// Tipizza l'istanza del player usando il default export tipizzato del modulo
+type ReactPlayerInstance = import('react-player').default
 
 interface VideoPlayerProps {
   courseId: string
@@ -194,7 +195,7 @@ export const VideoPlayer = ({
   }, [])
 
   const orderedCheckpoints = useMemo(
-    () => [...checkpoints].sort((a, b) => a.timeInSeconds - b.timeInSeconds),
+    () => [...(checkpoints ?? [])].sort((a, b) => a.timeInSeconds - b.timeInSeconds),
     [checkpoints],
   )
 
@@ -348,14 +349,14 @@ export const VideoPlayer = ({
         confetti.onOpen()
       }
 
-      toast.success('Progress updated')
+      toast.success('Progresso aggiornato')
       router.refresh()
 
       if (nextChapterId) {
         router.push(`/courses/${courseId}/chapters/${nextChapterId}`)
       }
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Qualcosa è andato storto')
     }
   }, [chapterId, completeOnEnd, confetti, courseId, nextChapterId, router])
 
@@ -543,13 +544,13 @@ export const VideoPlayer = ({
       {isLocked ? (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-y-2 rounded-xl bg-black/80 text-white">
           <Lock className="h-8 w-8" />
-          <p className="text-sm">This chapter is locked</p>
+          <p className="text-sm">Questo capitolo è bloccato</p>
         </div>
       ) : null}
 
       {!videoUrl && !isLocked ? (
         <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-white/30 bg-white/40 text-sm text-muted-foreground backdrop-blur-md supports-[backdrop-filter]:bg-white/30">
-          Lesson video will appear here once uploaded.
+          Il video della lezione apparirà qui una volta caricato.
         </div>
       ) : null}
 

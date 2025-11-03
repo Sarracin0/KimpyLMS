@@ -7,10 +7,10 @@ import { IconBadge } from './icon-badge'
 import { CourseProgress } from './course-progress'
 
 const STATUS_LABEL: Record<CourseEnrollmentStatus, string> = {
-  NOT_STARTED: 'Not started',
-  IN_PROGRESS: 'In progress',
-  COMPLETED: 'Completed',
-  OVERDUE: 'Overdue',
+  NOT_STARTED: 'Non iniziato',
+  IN_PROGRESS: 'In corso',
+  COMPLETED: 'Completato',
+  OVERDUE: 'In ritardo',
 }
 
 type CourseCardProps = {
@@ -35,7 +35,8 @@ export default function CourseCard({ id, title, moduleCount, progress, category,
             <h3 className="line-clamp-2 text-base font-semibold leading-tight tracking-tight group-hover:text-primary md:text-[15px]">
               {title}
             </h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">{category ?? 'General track'}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{category ?? 'Percorso generale'}
+            </p>
           </div>
         </div>
 
@@ -43,7 +44,7 @@ export default function CourseCard({ id, title, moduleCount, progress, category,
           <div className="flex items-center gap-1 text-muted-foreground">
             <IconBadge size="sm" icon={BookOpenIcon} />
             <span>
-              {moduleCount} {moduleCount === 1 ? 'Module' : 'Modules'}
+              {moduleCount} {moduleCount === 1 ? 'Modulo' : 'Moduli'}
             </span>
           </div>
           {status ? (
@@ -56,7 +57,7 @@ export default function CourseCard({ id, title, moduleCount, progress, category,
             <CourseProgress variant={progress === 100 ? 'success' : 'default'} size="sm" value={progress} />
           </div>
         ) : (
-          <span className="mt-3 inline-block text-sm font-medium text-primary">View course details</span>
+          <span className="mt-3 inline-block text-sm font-medium text-primary">Vedi dettagli del corso</span>
         )}
       </Card>
     </Link>

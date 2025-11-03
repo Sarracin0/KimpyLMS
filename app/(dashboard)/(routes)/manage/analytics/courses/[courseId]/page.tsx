@@ -145,7 +145,7 @@ export default async function CourseAnalyticsPage({ params }: { params: Promise<
               ) : (
                 analytics.learners.map((learner) => (
                   <tr key={learner.userProfileId} className="border-t border-white/30">
-                    <td className="px-4 py-3 text-sm font-medium text-foreground">{learner.userId}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-foreground">{learner.displayName}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{learner.jobTitle ?? '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{learner.status}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{formatPercent(learner.completionRate)}</td>

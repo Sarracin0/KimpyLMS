@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { requireAuthContext } from '@/lib/current-profile'
+import { buildUserDisplayNameMap, deriveDisplayNameFromIdentifier } from '@/lib/display-name'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -188,11 +189,37 @@ export default async function GamificationPage() {
     scenarioAttemptPromise,
   ])
 
+  const userIdsForDisplayNames = new Set<string>()
+  badgeAwards.forEach((award) => userIdsForDisplayNames.add(award.userProfile.userId))
+  topProfiles.forEach((profile) => userIdsForDisplayNames.add(profile.userId))
+
+  const displayNameMap =
+    userIdsForDisplayNames.size > 0
+      ? await buildUserDisplayNameMap(userIdsForDisplayNames)
+      : new Map<string, string>()
+
+  const badgeAwardsWithNames = badgeAwards.map((award) => ({
+    ...award,
+    userProfile: {
+      ...award.userProfile,
+      displayName:
+        displayNameMap.get(award.userProfile.userId) ??
+        deriveDisplayNameFromIdentifier(award.userProfile.userId, 'Utente'),
+    },
+  }))
+
+  const topProfilesWithNames = topProfiles.map((profile) => ({
+    ...profile,
+    displayName:
+      displayNameMap.get(profile.userId) ??
+      deriveDisplayNameFromIdentifier(profile.userId, 'Utente'),
+  }))
+
   const scenarioLabAttempts = scenarioAttempts.filter((attempt) => attempt.attemptType === 'SCENARIO')
   const practiceArenaAttempts = scenarioAttempts.filter((attempt) => attempt.attemptType === 'ARENA')
 
   const badgeSummary = Array.from(
-    badgeAwards.reduce((map, entry) => {
+    badgeAwardsWithNames.reduce((map, entry) => {
       const current = map.get(entry.badgeId) ?? {
         badge: entry.badge,
         count: 0,
@@ -206,7 +233,7 @@ export default async function GamificationPage() {
 
       map.set(entry.badgeId, current)
       return map
-    }, new Map<string, { badge: (typeof badgeAwards)[number]['badge']; count: number; lastAwardedAt: Date }>())
+    }, new Map<string, { badge: (typeof badgeAwardsWithNames)[number]['badge']; count: number; lastAwardedAt: Date }>())
       .values(),
   ).sort((a, b) => b.count - a.count)
 
@@ -513,14 +540,14 @@ export default async function GamificationPage() {
     <GamificationClient
       badges={badgesData}
       courseStats={courseStats}
-      topProfiles={topProfiles}
+      topProfiles={topProfilesWithNames}
       scenarioStats={scenarioStats}
       scenarioMetrics={overallScenarioMetrics}
       arenaStats={arenaStats}
       arenaMetrics={overallArenaMetrics}
       recentArenaSummaries={recentArenaSummaries}
       recentReflections={recentReflections}
-      badgeAwards={badgeAwards}
+      badgeAwards={badgeAwardsWithNames}
       currentProfileId={profile.id}
     />
   )
@@ -602,16 +629,16 @@ export default async function GamificationPage() {
             <p className="text-xs text-muted-foreground">Aggiornato in tempo reale dal registro punti.</p>
           </CardHeader>
           <CardContent className="space-y-3">
-            {topProfiles.map((user) => (
+            {topProfilesWithNames.map((user) => (
               <div key={user.id} className="rounded-lg border border-border/40 bg-card/70 px-3 py-2 text-sm">
-                <p className="font-medium text-foreground">{user.userId}</p>
+                <p className="font-medium text-foreground">{user.displayName}</p>
                 <p className="text-xs text-muted-foreground">
                   {user.jobTitle ?? '—'} · {user.department ?? '—'}
                 </p>
                 <p className="text-xs text-muted-foreground">Points: {user.points}</p>
               </div>
             ))}
-            {topProfiles.length === 0 ? (
+            {topProfilesWithNames.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nessun partecipante con punti registrati.</p>
             ) : null}
           </CardContent>
@@ -852,13 +879,13 @@ export default async function GamificationPage() {
             <p className="text-xs text-muted-foreground">Gli ultimi 25 rilasci del tuo team.</p>
           </CardHeader>
           <CardContent className="space-y-3">
-            {badgeAwards.length === 0 ? (
+            {badgeAwardsWithNames.length === 0 ? (
               <p className="text-sm text-muted-foreground">Ancora nessun badge assegnato nel tuo team.</p>
             ) : (
-              badgeAwards.map((award) => (
+              badgeAwardsWithNames.map((award) => (
                 <div key={award.id} className="flex flex-col gap-1 rounded-lg border border-border/40 bg-card/70 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-medium text-foreground">{award.userProfile.userId}</p>
+                    <p className="font-medium text-foreground">{award.userProfile.displayName}</p>
                     <p className="text-xs text-muted-foreground">{award.badge.name}</p>
                   </div>
                   <div className="text-xs text-muted-foreground">

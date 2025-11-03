@@ -23,6 +23,7 @@ type Badge = {
 type TopProfile = {
   id: string
   userId: string
+  displayName: string
   points: number
   jobTitle?: string | null
   department?: string | null
@@ -103,7 +104,7 @@ type BadgeAward = {
   id: string
   awardedAt: Date
   badge: { name: string }
-  userProfile: { userId: string }
+  userProfile: { userId: string; displayName: string }
 }
 
 export type GamificationClientProps = {
