@@ -34,13 +34,13 @@ export const NavbarRoutes = () => {
               className={`hidden items-center gap-2 md:inline-flex ${!isManageRoute ? 'bg-[#5D62E1] text-white hover:bg-[#5055c9]' : 'text-[#5D62E1] border-[#5D62E1] hover:bg-[#5D62E1]/10'}`}
             >
               {isManageRoute ? <Plus className="h-4 w-4" /> : <Briefcase className="h-4 w-4" />}
-              {isManageRoute ? 'New Course' : 'Manage Space'}
+              {isManageRoute ? 'Nuovo corso' : 'Gestisci spazio'}
             </Button>
           </Link>
         ) : null}
         <div className="hidden flex-col items-end text-xs font-medium text-muted-foreground md:flex">
-          <span className="text-sm font-semibold text-foreground">{profile.points} pts</span>
-          <span>Streak: {profile.streakCount}</span>
+          <span className="text-sm font-semibold text-foreground">{profile.points} punti</span>
+          <span>Serie: {profile.streakCount}</span>
         </div>
         <UserButton appearance={{ elements: { avatarBox: 'h-10 w-10 border border-muted-foreground/20' } }} />
       </div>

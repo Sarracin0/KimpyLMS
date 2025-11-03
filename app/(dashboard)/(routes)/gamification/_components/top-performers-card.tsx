@@ -6,6 +6,7 @@ import { Trophy } from 'lucide-react'
 type TopProfile = {
   id: string
   userId: string
+  displayName: string
   points: number
   jobTitle?: string | null
   department?: string | null
@@ -38,7 +39,7 @@ export function TopPerformersCard({ topProfiles }: { topProfiles: TopProfile[] }
               {index === 0 ? <Trophy className="h-4 w-4 text-yellow-600" /> : index + 1}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate">{user.userId}</p>
+              <p className="text-sm font-medium truncate">{user.displayName}</p>
               <p className="text-xs text-muted-foreground truncate">
                 {user.jobTitle ?? '—'} · {user.department ?? '—'}
               </p>

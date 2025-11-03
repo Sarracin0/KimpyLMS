@@ -39,7 +39,7 @@ export default function CoursesList({ items, emptyState }: CoursesListProps) {
 
       {items.length === 0 ? (
         <div className="mt-10 text-center text-sm text-muted-foreground">
-          {emptyState ?? 'No courses to show yet.'}
+          {emptyState ?? 'Nessun corso da mostrare al momento.'}
         </div>
       ) : null}
     </div>

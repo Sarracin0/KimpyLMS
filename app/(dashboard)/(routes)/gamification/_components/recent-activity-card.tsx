@@ -31,7 +31,7 @@ type BadgeAward = {
   id: string
   awardedAt: Date
   badge: { name: string }
-  userProfile: { userId: string }
+  userProfile: { userId: string; displayName: string }
 }
 
 export function RecentActivityCard({
@@ -135,7 +135,7 @@ export function RecentActivityCard({
                 className="flex flex-col gap-1 rounded-lg border border-border/40 bg-muted/20 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
-                  <p className="font-medium">{award.userProfile.userId}</p>
+                  <p className="font-medium">{award.userProfile.displayName}</p>
                   <p className="text-xs text-muted-foreground">{award.badge.name}</p>
                 </div>
                 <div className="text-xs text-muted-foreground">

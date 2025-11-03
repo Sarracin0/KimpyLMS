@@ -13,15 +13,23 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Trash2 } from 'lucide-react'
 
+type MemberProfileWithName = Pick<UserProfile, 'id' | 'userId' | 'jobTitle' | 'role' | 'points'> & {
+  displayName: string
+}
+
 type TeamWithMembers = CompanyTeam & {
   memberships: (TeamMembership & {
-    userProfile: Pick<UserProfile, 'id' | 'userId' | 'jobTitle' | 'role' | 'points'>
+    userProfile: MemberProfileWithName
   })[]
+}
+
+type AvailableMember = Pick<UserProfile, 'id' | 'userId' | 'jobTitle' | 'role'> & {
+  displayName: string
 }
 
 type TeamCardProps = {
   team: TeamWithMembers
-  availableMembers: Pick<UserProfile, 'id' | 'userId' | 'jobTitle' | 'role'>[]
+  availableMembers: AvailableMember[]
 }
 
 export const TeamCard = ({ team, availableMembers }: TeamCardProps) => {
@@ -88,8 +96,8 @@ export const TeamCard = ({ team, availableMembers }: TeamCardProps) => {
       <div className="grow space-y-2">
         {team.memberships.map((membership) => (
           <div key={membership.id} className="flex items-center justify-between rounded-md border border-border/40 bg-muted/20 px-3 py-2 text-sm hover:border-primary/20">
-            <div>
-              <p className="font-medium text-foreground">{membership.userProfile.userId}</p>
+            <div title={membership.userProfile.userId}>
+              <p className="font-medium text-foreground">{membership.userProfile.displayName}</p>
               <p className="text-xs text-muted-foreground">{membership.userProfile.jobTitle ?? membership.userProfile.role}</p>
             </div>
             <Button
@@ -98,7 +106,7 @@ export const TeamCard = ({ team, availableMembers }: TeamCardProps) => {
               disabled={isSubmitting}
               onClick={() => onRemoveMember(membership.userProfileId)}
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-              aria-label={`Rimuovi ${membership.userProfile.userId} da ${team.name}`}
+              aria-label={`Rimuovi ${membership.userProfile.displayName} da ${team.name}`}
             >
               <Trash2 className="mr-1 h-4 w-4" />
               Rimuovi
@@ -118,7 +126,7 @@ export const TeamCard = ({ team, availableMembers }: TeamCardProps) => {
           <SelectContent>
             {candidates.map((member) => (
               <SelectItem key={member.id} value={member.id}>
-                {member.userId} – {member.jobTitle ?? member.role}
+                {member.displayName} – {member.jobTitle ?? member.role}
               </SelectItem>
             ))}
           </SelectContent>

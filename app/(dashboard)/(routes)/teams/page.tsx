@@ -3,6 +3,7 @@ import { Users, Crown, GraduationCap, User } from 'lucide-react'
 
 import { db } from '@/lib/db'
 import { requireAuthContext } from '@/lib/current-profile'
+import { buildUserDisplayNameMap, deriveDisplayNameFromIdentifier } from '@/lib/display-name'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -51,10 +52,20 @@ export default async function TeamsPage() {
       ],
     })
 
+    const userIdSet = new Set(allUsers.map((user) => user.userId))
+    const displayNameMap =
+      userIdSet.size > 0 ? await buildUserDisplayNameMap(userIdSet) : new Map<string, string>()
+
+    const allUsersWithNames = allUsers.map((user) => ({
+      ...user,
+      displayName:
+        displayNameMap.get(user.userId) ?? deriveDisplayNameFromIdentifier(user.userId, 'Utente'),
+    }))
+
     const usersByRole = {
-      [UserRole.HR_ADMIN]: allUsers.filter(user => user.role === UserRole.HR_ADMIN),
-      [UserRole.TRAINER]: allUsers.filter(user => user.role === UserRole.TRAINER),
-      [UserRole.LEARNER]: allUsers.filter(user => user.role === UserRole.LEARNER),
+      [UserRole.HR_ADMIN]: allUsersWithNames.filter((user) => user.role === UserRole.HR_ADMIN),
+      [UserRole.TRAINER]: allUsersWithNames.filter((user) => user.role === UserRole.TRAINER),
+      [UserRole.LEARNER]: allUsersWithNames.filter((user) => user.role === UserRole.LEARNER),
     }
 
     return (
@@ -96,13 +107,13 @@ export default async function TeamsPage() {
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={user.avatarUrl || undefined} />
                           <AvatarFallback>
-                            {user.userId.split('@')[0].slice(0, 2).toUpperCase()}
+                            {user.displayName.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-foreground truncate">
-                              {user.userId.split('@')[0]}
+                              {user.displayName}
                             </p>
                             <Badge variant="outline" className={roleColors[user.role]}>
                               {roleLabel}
@@ -178,6 +189,29 @@ export default async function TeamsPage() {
     orderBy: { name: 'asc' },
   })
 
+  const teamUserIds = new Set<string>()
+  teams.forEach((team) => {
+    team.memberships.forEach((membership) => {
+      teamUserIds.add(membership.userProfile.userId)
+    })
+  })
+
+  const teamDisplayNameMap =
+    teamUserIds.size > 0 ? await buildUserDisplayNameMap(teamUserIds) : new Map<string, string>()
+
+  const teamsWithNames = teams.map((team) => ({
+    ...team,
+    memberships: team.memberships.map((membership) => ({
+      ...membership,
+      userProfile: {
+        ...membership.userProfile,
+        displayName:
+          teamDisplayNameMap.get(membership.userProfile.userId) ??
+          deriveDisplayNameFromIdentifier(membership.userProfile.userId, 'Utente'),
+      },
+    })),
+  }))
+
   return (
     <div className="space-y-6 p-6">
       <div>
@@ -188,7 +222,7 @@ export default async function TeamsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {teams.map((team) => (
+        {teamsWithNames.map((team) => (
           <Card key={team.id}>
             <CardHeader>
               <CardTitle className="text-base">{team.name}</CardTitle>
@@ -203,12 +237,12 @@ export default async function TeamsPage() {
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={membership.userProfile.avatarUrl || undefined} />
                       <AvatarFallback>
-                        {membership.userProfile.userId.split('@')[0].slice(0, 2).toUpperCase()}
+                        {membership.userProfile.displayName.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">
-                        {membership.userProfile.userId.split('@')[0]}
+                        {membership.userProfile.displayName}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
                         {membership.userProfile.jobTitle || roleLabels[membership.userProfile.role]}

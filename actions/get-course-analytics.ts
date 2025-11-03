@@ -8,10 +8,12 @@ import {
 import { format, startOfWeek, subDays } from 'date-fns'
 
 import { db } from '@/lib/db'
+import { buildUserDisplayNameMap, deriveDisplayNameFromIdentifier } from '@/lib/display-name'
 
 type CourseLearnerRow = {
   userProfileId: string
   userId: string
+  displayName: string
   jobTitle: string | null
   status: CourseEnrollmentStatus
   completionRate: number
@@ -188,6 +190,15 @@ export async function getCourseAnalytics(courseId: string, companyId: string): P
     }),
   ])
 
+  const userIds = new Set<string>()
+  enrollments.forEach((enrollment) => {
+    const id = enrollment.userProfile?.userId
+    if (id) userIds.add(id)
+  })
+
+  const displayNameMap =
+    userIds.size > 0 ? await buildUserDisplayNameMap(userIds) : new Map<string, string>()
+
   const completedByUser = new Map<string, number>()
   lessonProgress.forEach((record) => {
     completedByUser.set(record.userProfileId, (completedByUser.get(record.userProfileId) ?? 0) + 1)
@@ -209,10 +220,15 @@ export async function getCourseAnalytics(courseId: string, companyId: string): P
     const profile = enrollment.userProfile
     const completedChapters = completedByUser.get(enrollment.userProfileId) ?? 0
     const completionRate = formatCompletionRate(completedChapters, totalChapters)
+    const userId = profile?.userId ?? 'Utente'
+    const displayName =
+      (profile?.userId ? displayNameMap.get(profile.userId) : undefined) ??
+      deriveDisplayNameFromIdentifier(userId, 'Utente')
 
     return {
       userProfileId: profile?.id ?? enrollment.userProfileId,
-      userId: profile?.userId ?? 'Utente',
+      userId,
+      displayName,
       jobTitle: profile?.jobTitle ?? null,
       status: enrollment.status,
       completionRate,

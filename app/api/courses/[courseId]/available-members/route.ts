@@ -3,6 +3,7 @@ import { UserRole } from '@prisma/client'
 
 import { db } from '@/lib/db'
 import { requireAuthContext } from '@/lib/current-profile'
+import { buildUserDisplayNameMap, deriveDisplayNameFromIdentifier } from '@/lib/display-name'
 
 // GET - Ottieni tutti i membri dell'organizzazione disponibili per l'iscrizione al corso
 export async function GET(
@@ -63,10 +64,16 @@ export async function GET(
     // Filtra i membri disponibili (non ancora iscritti)
     const availableMembersRaw = allMembers.filter((member) => !enrolledUserIds.includes(member.id))
 
+    const userIdSet = new Set(availableMembersRaw.map((member) => member.userId))
+    const displayNameMap =
+      userIdSet.size > 0 ? await buildUserDisplayNameMap(userIdSet) : new Map<string, string>()
+
     // Mappa per includere i team come array semplice { id, name }
     const availableMembers = availableMembersRaw.map((m) => ({
       id: m.id,
       userId: m.userId,
+      displayName:
+        displayNameMap.get(m.userId) ?? deriveDisplayNameFromIdentifier(m.userId, 'Utente'),
       role: m.role,
       jobTitle: m.jobTitle,
       department: m.department,
