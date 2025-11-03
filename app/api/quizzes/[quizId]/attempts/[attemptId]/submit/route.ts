@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { assertRole, requireAuthContext } from '@/lib/current-profile'
-import { Prisma, UserRole } from '@prisma/client'
+import { evaluateCourseAchievements } from '@/lib/evaluate-course-achievements'
+import { Prisma, UserRole, PointsType } from '@prisma/client'
 
 // Submit answers for an attempt, evaluate score and mark pass/fail
 // Body shape: { answers: Array<{ questionId: string, selectedOptionIds?: string[], freeText?: string }> }
@@ -14,7 +15,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const attempt = await db.quizAttempt.findFirst({
     where: { id: attemptId, quizId, userProfileId: profile.id },
-    include: { quiz: { include: { questions: { include: { options: true } }, lessonBlock: { include: { lesson: true } } } } },
+    include: {
+      quiz: {
+        include: {
+          questions: { include: { options: true } },
+          lessonBlock: {
+            include: {
+              lesson: {
+                include: {
+                  module: { select: { courseId: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   })
 
   if (!attempt || attempt.quiz.companyId !== company.id) {
@@ -113,16 +129,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // Gamification and progress on pass
   if (passed) {
     // Award points
-    if (attempt.quiz.pointsReward && attempt.quiz.pointsReward > 0) {
-      await db.userPoints.create({
-        data: {
-          userProfileId: profile.id,
-          delta: attempt.quiz.pointsReward,
-          type: 'COMPLETION',
-          reason: `Quiz ${attempt.quiz.title} passed`,
-          referenceId: attempt.quiz.id,
-        },
-      })
+    const reward = Math.max(0, attempt.quiz.pointsReward || 0)
+    if (reward > 0) {
+      await db.$transaction([
+        db.userProfile.update({
+          where: { id: profile.id },
+          data: { points: { increment: reward } },
+        }),
+        db.userPoints.create({
+          data: {
+            userProfileId: profile.id,
+            delta: reward,
+            type: PointsType.COMPLETION,
+            reason: `Quiz ${attempt.quiz.title} passed`,
+            referenceId: attempt.quiz.id,
+          },
+        }),
+      ])
     }
     // Mark lesson progress completed
     await db.userLessonProgress.upsert({
@@ -135,6 +158,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         pointsAwarded: attempt.quiz.pointsReward || 0,
       },
       update: { isCompleted: true, completedAt: new Date(), pointsAwarded: attempt.quiz.pointsReward || 0 },
+    })
+  }
+
+  const courseIdForEval = attempt.quiz.lessonBlock.lesson?.module?.courseId
+  if (courseIdForEval) {
+    await evaluateCourseAchievements({
+      courseId: courseIdForEval,
+      userProfileId: profile.id,
     })
   }
 

@@ -1,5 +1,8 @@
 import { BlockType, CourseEnrollment, UserProgress as PrismaUserProgress } from '@prisma/client'
 
+import { parseVideoCheckpoints } from '@/lib/video/checkpoints'
+import type { VideoCheckpoint } from '@/types/video'
+
 import { db } from '@/lib/db'
 
 type GetChapterArgs = {
@@ -38,6 +41,7 @@ type ChapterAccessResponse = {
         title: string
         content: string | null
         contentUrl: string | null
+        videoCheckpoints: VideoCheckpoint[]
         liveSessionConfig: Record<string, unknown> | null
         liveSession:
           | {
@@ -112,6 +116,7 @@ export async function getChapter({ userProfileId, companyId, courseId, chapterId
         title: true,
         content: true,
         contentUrl: true,
+        videoCheckpoints: true,
         liveSessionConfig: true,
         liveSession: {
           select: {
@@ -217,6 +222,7 @@ export async function getChapter({ userProfileId, companyId, courseId, chapterId
             title: lessonBlock.title,
             content: lessonBlock.content ?? null,
             contentUrl: lessonBlock.contentUrl ?? null,
+            videoCheckpoints: parseVideoCheckpoints(lessonBlock.videoCheckpoints ?? null),
             liveSessionConfig: (lessonBlock.liveSessionConfig as Record<string, unknown> | null) ?? null,
             liveSession: lessonBlock.liveSession,
             attachments: visibleBlockAttachments,

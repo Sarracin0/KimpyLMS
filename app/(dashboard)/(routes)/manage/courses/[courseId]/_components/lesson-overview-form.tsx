@@ -15,8 +15,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 
 const formSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().min(1, 'Description is required'),
+  title: z.string().min(1, 'Il titolo è obbligatorio'),
+  description: z.string().min(1, 'La descrizione è obbligatoria'),
   estimatedDurationMinutes: z
     .union([z.literal(''), z.coerce.number().min(0).max(1200)])
     .transform((value) => (value === '' ? null : value))
@@ -54,10 +54,10 @@ export const LessonOverviewForm = ({ courseId, chapterId, initialData }: LessonO
           description: values.description,
           estimatedDurationMinutes: values.estimatedDurationMinutes ?? null,
         })
-        toast.success('Lesson details saved')
+        toast.success('Dettagli della lezione salvati')
         router.refresh()
       } catch {
-        toast.error('Unable to save lesson details')
+        toast.error('Impossibile salvare i dettagli della lezione')
       }
     })
   }
@@ -71,9 +71,9 @@ export const LessonOverviewForm = ({ courseId, chapterId, initialData }: LessonO
             name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Lesson title *</FormLabel>
+                <FormLabel>Titolo della lezione *</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Welcome to the program" disabled={isSubmitting} {...field} />
+                  <Input placeholder="es. Benvenuto nel programma" disabled={isSubmitting} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -84,11 +84,11 @@ export const LessonOverviewForm = ({ courseId, chapterId, initialData }: LessonO
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Lesson narrative *</FormLabel>
+                <FormLabel>Narrativa della lezione *</FormLabel>
                 <FormControl>
                   <Textarea
                     rows={4}
-                    placeholder="Describe what happens in this lesson and why it matters."
+                    placeholder="Descrivi cosa succede in questa lezione e perché è importante."
                     disabled={isSubmitting}
                     {...field}
                   />
@@ -102,26 +102,26 @@ export const LessonOverviewForm = ({ courseId, chapterId, initialData }: LessonO
             name="estimatedDurationMinutes"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Estimated minutes</FormLabel>
+                <FormLabel>Minuti stimati</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     min={0}
                     max={1200}
-                    placeholder="e.g. 45"
+                    placeholder="es. 45"
                     disabled={isSubmitting}
                     value={field.value ?? ''}
                     onChange={field.onChange}
                   />
                 </FormControl>
-                <FormDescription>Helps employees block the right amount of time.</FormDescription>
+                <FormDescription>Aiuta i dipendenti a pianificare il tempo necessario.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
           <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving…' : 'Save lesson basics'}
+              {isSubmitting ? 'Salvataggio…' : 'Salva le informazioni della lezione'}
             </Button>
           </div>
         </form>

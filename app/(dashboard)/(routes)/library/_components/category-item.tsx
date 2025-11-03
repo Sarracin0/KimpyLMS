@@ -41,12 +41,12 @@ export const CategoryItem = ({ label, value, icon: Icon }: CategoryItemProps) =>
     <button
       onClick={onClick}
       className={cn(
-        'flex items-center gap-x-1 rounded-full border border-slate-200 px-3 py-2 text-sm transition hover:border-sky-700',
-        isSelected && 'border-sky-700 bg-sky-200/20 text-sky-800',
+        'flex items-center gap-x-2 rounded-full border border-border/60 bg-background px-3 py-1.5 text-sm text-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
+        isSelected && 'border-primary/40 bg-primary/10 text-primary',
       )}
       type="button"
     >
-      {Icon && <Icon size={20} />}
+      {Icon && <Icon size={18} />}
       <div className="truncate">{label}</div>
     </button>
   )

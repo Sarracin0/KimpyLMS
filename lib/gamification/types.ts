@@ -66,9 +66,100 @@ export type GeneratedFlashcardPayload = {
   cards: GeneratedFlashcardCard[]
 }
 
+export type GeneratedScenarioImpact = {
+  score?: number
+  risk?: number
+  competencyTags?: string[]
+  summary?: string | null
+}
+
+export type GeneratedScenarioChoice = {
+  id: string
+  label: string
+  feedback: string
+  impact?: GeneratedScenarioImpact
+  nextNodeId?: string | null
+}
+
+export type GeneratedScenarioRubric = {
+  excellent?: string
+  satisfactory?: string
+  needsSupport?: string
+}
+
+export type GeneratedScenarioNode = {
+  id: string
+  type: 'decision' | 'reflection'
+  situation: string
+  headline?: string | null
+  narrative?: string | null
+  prompt?: string | null
+  guidance?: string | null
+  choices?: GeneratedScenarioChoice[]
+  rubric?: GeneratedScenarioRubric | null
+  maxScore?: number | null
+}
+
+export type GeneratedScenarioDebrief = {
+  summary: string
+  coachingPoints?: string[]
+  skillSignals?: string[]
+  riskAlerts?: string[]
+  followUpQuestions?: string[]
+}
+
+export type GeneratedScenarioPayload = {
+  intro: string
+  objectives: string[]
+  estimatedDurationMinutes?: number | null
+  contextNotes?: string | null
+  nodes: GeneratedScenarioNode[]
+  debrief: GeneratedScenarioDebrief
+}
+
+export type GeneratedArenaAxisLevels = {
+  excels?: string
+  solid?: string
+  needsSupport?: string
+}
+
+export type GeneratedArenaAxis = {
+  id: string
+  label: string
+  description?: string | null
+  weight?: number | null
+  levels: GeneratedArenaAxisLevels
+  coachingTips?: string[]
+}
+
+export type GeneratedArenaTokens = {
+  baseAward: number
+  improvementBonus: number
+  endorsementBonus: number
+}
+
+export type GeneratedArenaPayload = {
+  title: string
+  scenarioBrief: string
+  learnerRole: string
+  objectives: string[]
+  challenge: string
+  submissionPrompt: string
+  iterationPrompt: string
+  peerReviewPrompt: string
+  expectedSections: string[]
+  axes: GeneratedArenaAxis[]
+  aiCoachTips: string[]
+  estimatedDurationMinutes?: number | null
+  sampleHighScorePlan?: string | null
+  tokens: GeneratedArenaTokens
+}
+
 export type GamificationGenerationResult = {
   type: GamificationContentType
   raw?: unknown
   quiz?: GeneratedQuizPayload
   flashcards?: GeneratedFlashcardPayload
+  scenario?: GeneratedScenarioPayload
+  arena?: GeneratedArenaPayload
 }

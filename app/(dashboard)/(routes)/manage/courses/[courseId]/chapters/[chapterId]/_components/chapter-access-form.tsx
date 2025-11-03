@@ -43,32 +43,32 @@ export const ChapterAccessForm = ({ initialData, courseId, chapterId }: ChapterA
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       await axios.patch(`/api/courses/${courseId}/chapters/${chapterId}`, values)
-      toast.success('Chapter updated')
+      toast.success('Capitolo aggiornato')
       toggleEdit()
       router.refresh()
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Si è verificato un errore')
     }
   }
 
   return (
     <div className="mt-6 rounded-md border bg-slate-100 p-4">
       <div className="flex items-center justify-between font-medium">
-        Chapter access
+        Accesso al capitolo
         <Button onClick={toggleEdit} variant="ghost">
           {isEditing ? (
-            <>Cancel</>
+            <>Annulla</>
           ) : (
             <>
               <Pencil className="mr-2 h-4 w-4" />
-              Edit access
+              Modifica accesso
             </>
           )}
         </Button>
       </div>
       {!isEditing && (
         <p className={cn('mt-2 text-sm', !initialData.isPreview && 'italic text-slate-500')}>
-          {initialData.isPreview ? <>This chapter is available as a preview.</> : <>Preview disabled for this chapter.</>}
+          {initialData.isPreview ? <>Questo capitolo è disponibile in anteprima.</> : <>Anteprima disattivata per questo capitolo.</>}
         </p>
       )}
       {isEditing && (
@@ -83,14 +83,14 @@ export const ChapterAccessForm = ({ initialData, courseId, chapterId }: ChapterA
                     <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormDescription>Enable this if you want learners to preview the chapter contents before enrolling.</FormDescription>
+                    <FormDescription>Abilita questa opzione se vuoi che i learner vedano il capitolo in anteprima prima di iscriversi.</FormDescription>
                   </div>
                 </FormItem>
               )}
             />
             <div className="flex items-center gap-x-2">
               <Button disabled={!isValid || isSubmitting} type="submit">
-                Save
+                Salva
               </Button>
             </div>
           </form>

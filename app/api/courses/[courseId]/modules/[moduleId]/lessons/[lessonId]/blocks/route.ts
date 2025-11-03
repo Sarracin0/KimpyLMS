@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { BlockType, GamificationContentType, Prisma, UserRole } from '@prisma/client'
+import { GamificationContentType, Prisma, UserRole } from '@prisma/client'
 
 import { db } from '@/lib/db'
 import { assertRole, requireAuthContext } from '@/lib/current-profile'
@@ -110,6 +110,8 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
       videoUrl = null
     }
 
+    const initialCheckpoints: Prisma.JsonValue | null = type === 'VIDEO_LESSON' ? ([] as Prisma.JsonArray) : null
+
     const block = await db.lessonBlock.create({
       data: {
         lessonId,
@@ -121,6 +123,7 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
         contentUrl,
         liveSessionId,
         liveSessionConfig,
+        videoCheckpoints: initialCheckpoints,
       },
     })
 

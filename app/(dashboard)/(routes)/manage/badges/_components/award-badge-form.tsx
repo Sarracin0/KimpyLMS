@@ -28,12 +28,12 @@ export const AwardBadgeForm = ({ badgeId, members }: AwardBadgeFormProps) => {
         userProfileId: selectedMember,
         context,
       })
-      toast.success('Badge awarded')
+      toast.success('Badge assegnato')
       setSelectedMember('')
       setContext('')
       router.refresh()
     } catch {
-      toast.error('Unable to award badge')
+      toast.error('Impossibile assegnare il badge')
     } finally {
       setIsSubmitting(false)
     }
@@ -43,7 +43,7 @@ export const AwardBadgeForm = ({ badgeId, members }: AwardBadgeFormProps) => {
     <div className="space-y-2">
       <Select value={selectedMember} onValueChange={setSelectedMember} disabled={isSubmitting}>
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select a learner" />
+          <SelectValue placeholder="Seleziona un utente" />
         </SelectTrigger>
         <SelectContent>
           {members.map((member) => (
@@ -57,11 +57,11 @@ export const AwardBadgeForm = ({ badgeId, members }: AwardBadgeFormProps) => {
         value={context}
         onChange={(event) => setContext(event.target.value)}
         rows={3}
-        placeholder="Why is this badge awarded?"
+        placeholder="Perché assegni questo badge?"
         disabled={isSubmitting}
       />
       <Button onClick={onSubmit} disabled={!selectedMember || isSubmitting}>
-        Award badge
+        Assegna badge
       </Button>
     </div>
   )

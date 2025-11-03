@@ -33,13 +33,7 @@ export default function CourseSidebarLesson({ lesson, courseId, isLocked }: Cour
         {lesson.blocks.length > 0 ? (
           <div className="flex flex-col">
             {lesson.blocks.map((block) => (
-              <CourseSidebarBlock
-                key={block.id}
-                block={block}
-                lessonId={lesson.id}
-                courseId={courseId}
-                isLocked={isLocked}
-              />
+                <CourseSidebarBlock key={block.id} block={block} courseId={courseId} isLocked={isLocked} />
             ))}
           </div>
         ) : (

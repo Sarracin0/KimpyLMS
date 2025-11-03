@@ -20,8 +20,8 @@ export default function CourseNavbar({ course, progressCount }: CourseNavbarProp
           className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/50 px-3 py-1.5 text-sm text-foreground backdrop-blur-md transition-colors hover:bg-white/60"
         >
           <ArrowLeft className="h-4 w-4 text-[#5D62E1]" />
-          <span className="hidden sm:inline">Back to courses</span>
-          <span className="sm:hidden">Back</span>
+          <span className="hidden sm:inline">Torna ai corsi</span>
+          <span className="sm:hidden">Indietro</span>
         </Link>
       </div>
 

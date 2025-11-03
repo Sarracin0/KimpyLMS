@@ -42,11 +42,11 @@ export default function CategoryForm({ initialData, courseId, options }: Categor
   const onSubmit = async (values: FormSchema) => {
     try {
       await axios.patch(`/api/courses/${courseId}`, values)
-      toast.success('Course updated!')
+      toast.success('Corso aggiornato!')
       toggleEdit()
       router.refresh()
     } catch {
-      toast.error('Something went wrong!')
+      toast.error('Si è verificato un errore!')
     }
   }
 
@@ -55,14 +55,14 @@ export default function CategoryForm({ initialData, courseId, options }: Categor
   return (
     <div className="rounded-xl border border-border/60 bg-card/80 p-6 shadow-sm transition-colors hover:border-primary/40">
       <div className="flex items-center justify-between font-medium">
-        Course Category
+        Categoria del corso
         <Button variant="ghost" onClick={toggleEdit}>
           {isEditing ? (
-            'Cancel'
+            'Annulla'
           ) : (
             <>
               <PencilIcon className="mr-2 h-4 w-4" />
-              Edit Category
+              Modifica categoria
             </>
           )}
         </Button>
@@ -70,7 +70,7 @@ export default function CategoryForm({ initialData, courseId, options }: Categor
 
       {!isEditing ? (
         <p className={cn('mt-2 text-sm', { 'italic text-muted-foreground': !initialData.categoryId })}>
-          {selectedOption?.label ?? 'No Category'}
+          {selectedOption?.label ?? 'Nessuna categoria'}
         </p>
       ) : (
         <Form {...form}>
@@ -90,7 +90,7 @@ export default function CategoryForm({ initialData, courseId, options }: Categor
 
             <div className="flex items-center gap-x-2">
               <Button disabled={!isValid || isSubmitting} type="submit">
-                Save
+                Salva
               </Button>
             </div>
           </form>

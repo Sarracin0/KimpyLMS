@@ -27,6 +27,7 @@ import CourseBasicsForm from './course-basics-form'
 import { CurriculumManager, mapModuleFromDb, type ModulePayload } from './curriculum-manager'
 import { CourseAchievementsPanel } from './course-achievements-panel'
 import { Badge } from '@/components/ui/badge'
+import type { VideoCheckpoint } from '@/types/video'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -84,10 +85,11 @@ export type LessonBlock = {
     questionCount: number
     pointsReward: number
   } | null
-  gamification?: {
-    id: string
-    status: import('@prisma/client').GamificationStatus
-    contentType: import('@prisma/client').GamificationContentType
+  videoCheckpoints?: VideoCheckpoint[] | null
+    gamification?: {
+      id: string
+      status: import('@prisma/client').GamificationStatus
+      contentType: 'QUIZ' | 'FLASHCARDS' | 'SCENARIO' | 'ARENA'
     quizId: string | null
     sourceAttachmentIds: string[]
     config: Record<string, unknown> | null
@@ -103,6 +105,19 @@ export type LessonBlock = {
       title: string
       questionCount: number
       pointsReward: number
+    } | null
+    scenarioSummary: {
+      intro: string
+      objectives: string[]
+      nodeCount: number
+      estimatedDurationMinutes: number | null
+    } | null
+    arenaSummary: {
+      title: string
+      learnerRole: string
+      axes: number
+      objectives: number
+      estimatedDurationMinutes: number | null
     } | null
   } | null
 }
@@ -124,6 +139,7 @@ export type CourseAchievement = {
   pointsReward: number
   icon?: string | null
   isActive: boolean
+  criteria?: Record<string, unknown> | null
   createdAt: string
 }
 
@@ -163,27 +179,27 @@ type StepState = StepDefinition & {
 const stepDefinitions: StepDefinition[] = [
   {
     id: 'basics',
-    title: 'Course basics',
-    description: 'Learning promise and context',
+    title: 'Informazioni di base',
+    description: 'Promessa formativa e contesto',
     icon: LayoutDashboard,
   },
   {
     id: 'curriculum',
-    title: 'Curriculum & lessons',
-    description: 'Chapters, videos and learning flow',
+    title: 'Curriculum e lezioni',
+    description: 'Moduli, video e flusso di apprendimento',
     icon: ListChecks,
   },
   {
     id: 'achievements',
-    title: 'Achievements & points',
-    description: 'Gamification rewards and unlock logic',
+    title: 'Obiettivi e punti',
+    description: 'Ricompense gamificate e logiche di sblocco',
     icon: Award,
     optional: true,
   },
   {
     id: 'launch',
-    title: 'Launch & rollout',
-    description: 'Publish and plan assignments',
+    title: 'Lancio e distribuzione',
+    description: 'Pubblica e pianifica le assegnazioni',
     icon: Rocket,
   },
 ]
@@ -213,6 +229,7 @@ const mapAchievementFromDb = (achievement: DbAchievementWithRelations): CourseAc
   pointsReward: achievement.pointsReward,
   icon: achievement.icon ?? null,
   isActive: achievement.isActive,
+  criteria: (achievement.criteria as Record<string, unknown> | null) ?? null,
   createdAt: new Date(achievement.createdAt).toISOString(),
 })
 
@@ -331,34 +348,35 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
 
   const resourcesSummaryParts: string[] = []
   if (totalUploadedResources > 0) {
-    resourcesSummaryParts.push(`${totalUploadedResources} file${totalUploadedResources === 1 ? '' : 's'}`)
+    resourcesSummaryParts.push(`${totalUploadedResources} file`)
   }
   if (totalLinkedResourcesFromBlocks > 0) {
-    resourcesSummaryParts.push(`${totalLinkedResourcesFromBlocks} link${totalLinkedResourcesFromBlocks === 1 ? '' : 's'}`)
+    const linkLabel = totalLinkedResourcesFromBlocks === 1 ? 'collegamento' : 'collegamenti'
+    resourcesSummaryParts.push(`${totalLinkedResourcesFromBlocks} ${linkLabel}`)
   }
   const resourcesSummary = resourcesSummaryParts.length > 0 ? resourcesSummaryParts.join(' • ') : '0'
 
   const stats = [
-    { label: 'Modules', value: modules.length.toString() },
-    { label: 'Lessons', value: totalLessons.toString() },
-    { label: 'Content blocks', value: totalBlocks.toString() },
-    { label: 'Resources', value: resourcesSummary },
-    { label: 'Achievements', value: achievements.length.toString() },
-    { label: 'Estimated duration', value: formatDuration(course.estimatedDurationMinutes) },
-    { label: 'Status', value: course.isPublished ? 'Published' : 'Draft' },
+    { label: 'Moduli', value: modules.length.toString() },
+    { label: 'Lezioni', value: totalLessons.toString() },
+    { label: 'Blocchi di contenuto', value: totalBlocks.toString() },
+    { label: 'Risorse', value: resourcesSummary },
+    { label: 'Obiettivi', value: achievements.length.toString() },
+    { label: 'Durata stimata', value: formatDuration(course.estimatedDurationMinutes) },
+    { label: 'Stato', value: course.isPublished ? 'Pubblicato' : 'Bozza' },
   ]
 
   const launchChecklist = [
-    { label: 'Course basics completed', complete: basicsComplete },
-    { label: 'At least one module created', complete: hasModules },
-    { label: 'At least one lesson created', complete: hasLessons },
+    { label: 'Informazioni di base completate', complete: basicsComplete },
+    { label: 'Almeno un modulo creato', complete: hasModules },
+    { label: 'Almeno una lezione creata', complete: hasLessons },
     {
-      label: 'Content blocks added',
+      label: 'Blocchi di contenuto aggiunti',
       complete: hasBlocks,
-      helper: 'Add video lessons or resources to your lessons.',
+      helper: 'Aggiungi lezioni video o risorse alle tue lezioni.',
     },
-    { label: 'Resources attached (optional)', complete: hasResources, optional: true },
-    { label: 'Achievements configured (optional)', complete: hasAchievements, optional: true },
+    { label: 'Risorse allegate (opzionale)', complete: hasResources, optional: true },
+    { label: 'Obiettivi configurati (opzionale)', complete: hasAchievements, optional: true },
   ]
 
   const renderStepContent = () => {
@@ -369,11 +387,11 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
             <div>
               <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <LayoutDashboard className="h-4 w-4 text-primary" />
-                Course basics
+                Informazioni di base
               </div>
-              <h2 className="mt-2 text-xl font-semibold text-foreground">Define the promise for your learners</h2>
+              <h2 className="mt-2 text-xl font-semibold text-foreground">Definisci la promessa per i tuoi learner</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Set the narrative, expected effort and key outcomes. Once saved you can jump into the lessons workspace.
+                Imposta narrativa, impegno richiesto e risultati chiave. Dopo il salvataggio puoi passare allo spazio di lavoro delle lezioni.
               </p>
             </div>
             <CourseBasicsForm
@@ -394,11 +412,11 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
             <div>
               <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <ListChecks className="h-4 w-4 text-primary" />
-                Curriculum design
+                Progettazione del curriculum
               </div>
-              <h2 className="mt-2 text-xl font-semibold text-foreground">Structure your learning journey</h2>
+              <h2 className="mt-2 text-xl font-semibold text-foreground">Struttura il percorso di apprendimento</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Organize your content into modules and lessons with different content types. Build a structured learning experience.
+                Organizza i contenuti in moduli e lezioni con tipi di contenuto diversi. Crea un'esperienza formativa strutturata.
               </p>
             </div>
             <CurriculumManager
@@ -414,7 +432,7 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
             <div>
               <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <Award className="h-4 w-4 text-primary" />
-                Achievements
+                Obiettivi
               </div>
               <h2 className="mt-2 text-xl font-semibold text-foreground">Premia i progressi del team</h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -435,18 +453,18 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
             <div>
               <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <Rocket className="h-4 w-4 text-primary" />
-                Launch plan
+                Piano di lancio
               </div>
-              <h2 className="mt-2 text-xl font-semibold text-foreground">Review and publish your course</h2>
+              <h2 className="mt-2 text-xl font-semibold text-foreground">Rivedi e pubblica il corso</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Double-check the essentials, publish when you&apos;re ready and then assign the track to teams or individuals.
+                Ricontrolla gli elementi essenziali, pubblica quando sei pronto e poi assegna il percorso a team o singoli.
               </p>
             </div>
             <Card className="rounded-xl border border-border/60 bg-card/80 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Readiness checklist</CardTitle>
+                <CardTitle className="text-base font-semibold">Checklist di preparazione</CardTitle>
                 <CardDescription>
-                  Publishing is available at any time—these checkpoints simply help you deliver a polished experience.
+                  Puoi pubblicare in qualsiasi momento: questi checkpoint ti aiutano a offrire un'esperienza curata.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -458,7 +476,7 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
                       <div>
                         <p className="text-sm font-medium text-foreground">
                           {item.label}
-                          {item.optional ? <span className="ml-2 text-xs text-muted-foreground">Optional</span> : null}
+                          {item.optional ? <span className="ml-2 text-xs text-muted-foreground">Opzionale</span> : null}
                         </p>
                         {item.helper ? <p className="text-xs text-muted-foreground">{item.helper}</p> : null}
                       </div>
@@ -469,12 +487,12 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
               <CardFooter className="flex flex-col gap-3 pt-0 md:flex-row md:items-center md:justify-between">
                 <Actions disabled={false} courseId={courseId} isPublished={course.isPublished} />
                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span>Next: assign to teams</span>
+                  <span>Prossimo passo: assegna ai team</span>
                   <Button size="sm" variant="outline" asChild>
-                    <Link href="/manage/teams">Manage teams</Link>
+                    <Link href="/manage/teams">Gestisci team</Link>
                   </Button>
                   <Button size="sm" variant="outline" asChild>
-                    <Link href="/manage/badges">Configure badges</Link>
+                    <Link href="/manage/badges">Configura badge</Link>
                   </Button>
                 </div>
               </CardFooter>
@@ -492,11 +510,11 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary">
             <Sparkles className="h-4 w-4" />
-            Guided builder
+            Builder guidato
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">Design your corporate learning experience</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Progetta la tua esperienza formativa aziendale</h1>
           <p className="text-sm text-muted-foreground">
-            Move through each step to craft a premium, multi-format course tailored for your teams.
+            Avanza fase dopo fase per costruire un corso multi-formato di qualità, su misura per i tuoi team.
           </p>
         </div>
         <div className="flex w-full flex-col gap-3 md:w-80">
@@ -509,9 +527,9 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
                   : 'bg-secondary text-secondary-foreground',
               )}
             >
-              {course.isPublished ? 'Published' : 'Draft'}
+              {course.isPublished ? 'Pubblicato' : 'Bozza'}
             </Badge>
-            <span className="text-xs font-medium text-muted-foreground">Completion {completion.text}</span>
+            <span className="text-xs font-medium text-muted-foreground">Completamento {completion.text}</span>
           </div>
           <div className="flex items-center gap-3">
             <Progress value={progressPercentage} variant={completion.isComplete ? 'success' : 'default'} className="h-2 flex-1" />
@@ -519,7 +537,7 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
           </div>
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">
-              You can publish whenever you&apos;re ready. These checkpoints are optional best practices.
+              Puoi pubblicare quando sei pronto. Questi checkpoint sono buone pratiche opzionali.
             </p>
             <div className="space-y-1.5">
               {completion.items.map((item) => {
@@ -541,8 +559,8 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
         <aside className="space-y-6">
           <Card className="border-border/60 bg-card/80 shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="text-base font-semibold">Course checklist</CardTitle>
-              <CardDescription>Navigate each phase of the builder.</CardDescription>
+              <CardTitle className="text-base font-semibold">Checklist del corso</CardTitle>
+              <CardDescription>Affronta ogni fase del builder.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               {stepStates.map((step, index) => {
@@ -580,7 +598,7 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
                     </div>
                     {step.optional ? (
                       <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-                        Optional
+                        Opzionale
                       </Badge>
                     ) : null}
                   </button>
@@ -591,8 +609,8 @@ const CourseBuilderWizard = ({ course, modules: modulesProp, courseId, completio
 
           <Card className="border-border/60 bg-card/80 shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="text-base font-semibold">At a glance</CardTitle>
-              <CardDescription>Your course snapshot updates in real time.</CardDescription>
+              <CardTitle className="text-base font-semibold">Colpo d'occhio</CardTitle>
+              <CardDescription>La panoramica del corso si aggiorna in tempo reale.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {stats.map((stat) => (

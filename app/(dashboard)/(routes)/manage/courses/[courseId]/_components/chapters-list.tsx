@@ -91,20 +91,20 @@ export const ChaptersList = ({ items, onReorder, onEdit }: ChaptersListProps) =>
                           {chapter.videoUrl ? (
                             <span className="inline-flex items-center gap-1">
                               <Video className="h-3 w-3" />
-                              Video attached
+                              Video presente
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1">
                               <Video className="h-3 w-3" />
-                              Media pending
+                              Media da caricare
                             </span>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-x-2">
-                        {chapter.isPreview && <Badge variant="outline">Preview</Badge>}
-                        <Badge className={cn('bg-slate-500', chapter.isPublished && 'bg-emerald-600')}> 
-                          {chapter.isPublished ? 'Published' : 'Draft'}
+                        {chapter.isPreview && <Badge variant="outline">Anteprima</Badge>}
+                        <Badge className={cn('bg-slate-500', chapter.isPublished && 'bg-emerald-600')}>
+                          {chapter.isPublished ? 'Pubblicato' : 'Bozza'}
                         </Badge>
                         <Pencil
                           onClick={(event) => {

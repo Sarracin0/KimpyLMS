@@ -39,11 +39,11 @@ export const NewBadgeForm = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       await axios.post('/api/badges', values)
-      toast.success('Badge created')
+      toast.success('Badge creato')
       form.reset()
       router.refresh()
     } catch {
-      toast.error('Unable to create badge')
+      toast.error('Impossibile creare il badge')
     }
   }
 
@@ -51,17 +51,17 @@ export const NewBadgeForm = () => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 rounded-lg border bg-white p-4 shadow-sm">
         <div>
-          <h3 className="text-base font-semibold text-foreground">Create a badge</h3>
-          <p className="text-xs text-muted-foreground">Reward learners with custom achievements.</p>
+          <h3 className="text-base font-semibold text-foreground">Crea un badge</h3>
+          <p className="text-xs text-muted-foreground">Premia il tuo team con riconoscimenti personalizzati.</p>
         </div>
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>Nome</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Customer Hero" disabled={isSubmitting} {...field} />
+                <Input placeholder="Es. Customer Hero" disabled={isSubmitting} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -72,9 +72,9 @@ export const NewBadgeForm = () => {
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel>Descrizione</FormLabel>
               <FormControl>
-                <Textarea rows={3} disabled={isSubmitting} placeholder="Why should learners receive it?" {...field} />
+                <Textarea rows={3} disabled={isSubmitting} placeholder="Perché dovrebbe essere assegnato?" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -86,11 +86,11 @@ export const NewBadgeForm = () => {
             name="type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Category</FormLabel>
+                <FormLabel>Categoria</FormLabel>
                 <Select disabled={isSubmitting} value={field.value} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder="Seleziona" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -110,9 +110,39 @@ export const NewBadgeForm = () => {
             name="pointsReward"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Points reward</FormLabel>
+                <FormLabel>Punti</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} max={500} disabled={isSubmitting} {...field} />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => field.onChange(Math.max(0, Number(field.value || 0) - 1))}
+                      disabled={isSubmitting}
+                      aria-label="Diminuisci punti"
+                    >
+                      −
+                    </Button>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={500}
+                      disabled={isSubmitting}
+                      className="w-24 text-center"
+                      {...field}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => field.onChange(Math.min(500, Number(field.value || 0) + 1))}
+                      disabled={isSubmitting}
+                      aria-label="Aumenta punti"
+                    >
+                      +
+                    </Button>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -120,7 +150,7 @@ export const NewBadgeForm = () => {
           />
         </div>
         <Button type="submit" disabled={!isValid || isSubmitting}>
-          Publish badge
+          Crea badge
         </Button>
       </form>
     </Form>

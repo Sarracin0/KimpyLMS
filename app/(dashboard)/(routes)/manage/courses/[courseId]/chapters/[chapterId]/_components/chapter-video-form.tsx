@@ -38,17 +38,17 @@ export const ChapterVideoForm = ({ initialData, courseId, chapterId }: ChapterVi
     try {
       formSchema.parse(values)
       await axios.patch(`/api/courses/${courseId}/chapters/${chapterId}`, values)
-      toast.success('Chapter updated')
+      toast.success('Capitolo aggiornato')
       toggleEdit()
       router.refresh()
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Si è verificato un errore')
     }
   }
 
   const onSaveManualLink = async () => {
     if (!manualUrl) {
-      toast.error('Add a valid URL before saving')
+      toast.error('Inserisci un URL valido prima di salvare')
       return
     }
 
@@ -56,7 +56,7 @@ export const ChapterVideoForm = ({ initialData, courseId, chapterId }: ChapterVi
       setIsSavingLink(true)
       await onSubmit({ videoUrl: manualUrl })
     } catch {
-      toast.error('Unable to save link')
+      toast.error('Impossibile salvare il link')
     } finally {
       setIsSavingLink(false)
     }
@@ -65,19 +65,19 @@ export const ChapterVideoForm = ({ initialData, courseId, chapterId }: ChapterVi
   return (
     <div className="mt-6 rounded-md border bg-slate-100 p-4">
       <div className="flex items-center justify-between font-medium">
-        Chapter video
+        Video del capitolo
         <Button onClick={toggleEdit} variant="ghost">
-          {isEditing && <>Cancel</>}
+          {isEditing && <>Annulla</>}
           {!isEditing && !initialData.videoUrl && (
             <>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add a video
+              Aggiungi un video
             </>
           )}
           {!isEditing && initialData.videoUrl && (
             <>
               <Pencil className="mr-2 h-4 w-4" />
-              Edit video
+              Modifica video
             </>
           )}
         </Button>
@@ -100,9 +100,9 @@ export const ChapterVideoForm = ({ initialData, courseId, chapterId }: ChapterVi
       {isEditing && (
         <div className="space-y-4">
           <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 p-4">
-            <p className="text-sm font-medium text-foreground">Upload a video file</p>
+            <p className="text-sm font-medium text-foreground">Carica un file video</p>
             <p className="text-xs text-muted-foreground">
-              We use UploadThing for secure storage. Ensure `UPLOADTHING_TOKEN` is configured in your environment.
+              Utilizziamo UploadThing per l&apos;archiviazione sicura. Assicurati che `UPLOADTHING_TOKEN` sia configurato nell&apos;ambiente.
             </p>
             <div className="mt-3">
               <FileUpload
@@ -116,9 +116,9 @@ export const ChapterVideoForm = ({ initialData, courseId, chapterId }: ChapterVi
             </div>
           </div>
           <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
-            <p className="text-sm font-medium text-foreground">…or paste a hosted link</p>
+            <p className="text-sm font-medium text-foreground">…oppure incolla un link esterno</p>
             <p className="text-xs text-muted-foreground">
-              Link to an MP4, Vimeo, YouTube unlisted, or any internal streaming URL your company already uses.
+              Collega un MP4, un video Vimeo, YouTube non in elenco o un URL di streaming interno già in uso in azienda.
             </p>
             <div className="mt-3 flex flex-col gap-2 md:flex-row">
               <Input
@@ -128,7 +128,7 @@ export const ChapterVideoForm = ({ initialData, courseId, chapterId }: ChapterVi
                 disabled={isSavingLink}
               />
               <Button onClick={onSaveManualLink} disabled={isSavingLink}>
-                {isSavingLink ? 'Saving…' : 'Save link'}
+                {isSavingLink ? 'Salvataggio…' : 'Salva link'}
               </Button>
             </div>
           </div>
@@ -136,7 +136,7 @@ export const ChapterVideoForm = ({ initialData, courseId, chapterId }: ChapterVi
       )}
       {initialData.videoUrl && !isEditing && (
         <div className="mt-2 text-xs text-muted-foreground">
-          Ensure uploaded videos are compressed for smooth playback.
+          Assicurati che i video caricati siano compressi per una riproduzione fluida.
         </div>
       )}
     </div>

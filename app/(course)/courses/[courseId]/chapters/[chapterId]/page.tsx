@@ -8,6 +8,8 @@ import { Preview } from '@/components/preview'
 import { Separator } from '@/components/ui/separator'
 import { requireAuthContext } from '@/lib/current-profile'
 
+import { AttachmentResourceList } from '../../_components/attachment-resource-list'
+
 import CourseEnrollButton from './_components/course-enroll-button'
 import { CourseProgressButton } from './_components/course-progress-button'
 import { VideoPlayer } from './_components/video-player'
@@ -60,15 +62,15 @@ export default async function ChapterDetails({ params }: ChapterDetailsProps) {
 
   return (
     <div>
-      {userProgress?.isCompleted ? <Banner label="You already completed this chapter." variant="success" /> : null}
-      {isLocked ? <Banner label="Enroll in this course to unlock the chapter." variant="warning" /> : null}
+      {userProgress?.isCompleted ? <Banner label="Hai già completato questo capitolo." variant="success" /> : null}
+      {isLocked ? <Banner label="Iscriviti a questo corso per sbloccare il capitolo." variant="warning" /> : null}
 
       <div className="mx-auto max-w-5xl space-y-4 pb-20 p-4">
         {/* Header: title above video with action on the right */}
         <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-white/20 bg-white/60 p-5 text-foreground backdrop-blur-md supports-[backdrop-filter]:bg-white/50 md:flex-row">
           <div>
             <h1 className="text-2xl font-semibold">{chapter.title}</h1>
-            <p className="text-sm text-muted-foreground">Part of {course.title}</p>
+            <p className="text-sm text-muted-foreground">Parte di {course.title}</p>
           </div>
           {enrollment ? (
             <CourseProgressButton
@@ -120,18 +122,8 @@ export default async function ChapterDetails({ params }: ChapterDetailsProps) {
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Documenti allegati</h3>
                 {block.attachments && block.attachments.length > 0 ? (
-                  <div className="mt-3 space-y-2">
-                    {block.attachments.map((attachment) => (
-                      <a
-                        key={attachment.id}
-                        className="flex w-full items-center justify-between rounded-lg border border-white/40 bg-white/60 p-3 text-sm text-foreground transition-colors backdrop-blur-md supports-[backdrop-filter]:bg-white/50 hover:bg-white/70"
-                        target="_blank"
-                        href={attachment.url}
-                        rel="noreferrer"
-                      >
-                        {attachment.name}
-                      </a>
-                    ))}
+                  <div className="mt-3">
+                    <AttachmentResourceList attachments={block.attachments} contextLabel={block.title || chapter.title} />
                   </div>
                 ) : (
                   <p className="mt-2 text-xs text-muted-foreground">
@@ -149,6 +141,7 @@ export default async function ChapterDetails({ params }: ChapterDetailsProps) {
               isLocked={isLocked}
               completeOnEnd={completedOnEnd}
               videoUrl={chapter.videoUrl ?? undefined}
+              checkpoints={block?.videoCheckpoints ?? []}
             />
           )}
         </div>
@@ -158,25 +151,13 @@ export default async function ChapterDetails({ params }: ChapterDetailsProps) {
           {chapter.description ? (
             <Preview value={chapter.description} />
           ) : (
-            <p className="text-sm text-muted-foreground">No description provided for this lesson yet.</p>
+            <p className="text-sm text-muted-foreground">Nessuna descrizione disponibile per questa lezione.</p>
           )}
         </div>
 
         {/* Attachments (already styled to glass links) */}
         {attachments && attachments.length > 0 && block?.type !== 'RESOURCES' ? (
-          <div className="space-y-2">
-            {attachments.map((attachment) => (
-              <a
-                className="flex w-full items-center justify-between rounded-lg border border-white/30 bg-white/50 p-3 text-sm text-foreground transition-colors backdrop-blur-md supports-[backdrop-filter]:bg-white/40 hover:bg-white/60"
-                key={attachment.id}
-                target="_blank"
-                href={attachment.url}
-                rel="noreferrer"
-              >
-                {attachment.name}
-              </a>
-            ))}
-          </div>
+          <AttachmentResourceList attachments={attachments} contextLabel={chapter.title} />
         ) : null}
       </div>
     </div>

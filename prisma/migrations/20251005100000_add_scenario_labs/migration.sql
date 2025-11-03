@@ -1,0 +1,2 @@
+-- Placeholder migration retained for backwards compatibility.
+-- No schema changes because Decision Lab tables are managed by earlier migrations in this branch.

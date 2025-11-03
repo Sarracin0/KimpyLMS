@@ -56,43 +56,43 @@ export const LessonWorkspaceSheet = ({ courseId, chapter, attachments, onOpenCha
   const blocks = [
     {
       id: 'overview' as const,
-      title: 'Overview',
-      description: 'Tone, narrative, estimated effort',
+      title: 'Panoramica',
+      description: 'Tono, narrativa, impegno stimato',
       icon: LayoutDashboard,
       completed: blockStatuses.overview,
     },
     {
       id: 'video' as const,
-      title: 'Video lesson',
-      description: blockStatuses.video ? 'Video ready' : 'Upload or link a video',
+      title: 'Lezione video',
+      description: blockStatuses.video ? 'Video pronto' : 'Carica o collega un video',
       icon: Video,
       completed: blockStatuses.video,
     },
     {
       id: 'live' as const,
-      title: 'Live session',
-      description: 'Schedule a live touchpoint',
+      title: 'Sessione live',
+      description: 'Pianifica un momento in diretta',
       icon: CalendarClock,
       completed: blockStatuses.live,
     },
     {
       id: 'resources' as const,
-      title: 'Resources',
-      description: attachments.length ? `${attachments.length} supporting files` : 'Slides, PDFs, playbooks',
+      title: 'Risorse',
+      description: attachments.length ? `${attachments.length} file di supporto` : 'Slide, PDF, manuali',
       icon: BookOpenCheck,
       completed: blockStatuses.resources,
     },
     {
       id: 'gamification' as const,
-      title: 'Gamification',
-      description: 'Plan future rewards',
+      title: 'Gamificazione',
+      description: 'Pianifica le ricompense future',
       icon: Sparkles,
       completed: blockStatuses.gamification,
     },
     {
       id: 'access' as const,
-      title: 'Access & publishing',
-      description: chapter.isPublished ? 'Lesson is live' : 'Preview and publish controls',
+      title: 'Accesso e pubblicazione',
+      description: chapter.isPublished ? 'Lezione pubblicata' : 'Anteprima e comandi di pubblicazione',
       icon: Sparkles,
       completed: blockStatuses.access,
     },
@@ -116,8 +116,8 @@ export const LessonWorkspaceSheet = ({ courseId, chapter, attachments, onOpenCha
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Upload a video file (requires `UPLOADTHING_TOKEN`) or paste a secure URL to streaming content hosted on Vimeo, YouTube
-              or your internal CDN.
+              Carica un file video (richiede `UPLOADTHING_TOKEN`) oppure incolla un URL sicuro verso contenuti in streaming ospitati
+              su Vimeo, YouTube o sul tuo CDN interno.
             </p>
             <ChapterVideoForm initialData={chapter} chapterId={chapter.id} courseId={courseId} />
           </div>
@@ -127,12 +127,11 @@ export const LessonWorkspaceSheet = ({ courseId, chapter, attachments, onOpenCha
           <Card className="border-dashed border-border/60 bg-muted/20">
             <CardContent className="space-y-3 p-5 text-sm text-muted-foreground">
               <p>
-                Live streaming integration is part of the roadmap. For now add a calendar invite link or webinar recording in the
-                resources block so learners have the dial-in details.
+                L&apos;integrazione con il live streaming è nella roadmap. Per ora aggiungi nel blocco risorse un link all&apos;invito in
+                calendario o alla registrazione del webinar così i learner avranno tutti i dettagli di accesso.
               </p>
               <p className="text-xs">
-                Coming soon: automatically sync live sessions with the Live Sessions module and trigger attendance-based
-                gamification.
+                In arrivo: sincronizzazione automatica con il modulo Live Sessions e gamification basata sulla partecipazione.
               </p>
             </CardContent>
           </Card>
@@ -146,12 +145,12 @@ export const LessonWorkspaceSheet = ({ courseId, chapter, attachments, onOpenCha
           <Card className="border-dashed border-border/60 bg-muted/20">
             <CardContent className="space-y-3 p-5 text-sm text-muted-foreground">
               <p>
-                We&apos;re preparing the Gamification Studio where you&apos;ll award badges, streaks and bonus points per lesson. Map the
-                learning outcomes now so adding incentives later is effortless.
+                Stiamo preparando il Gamification Studio, dove potrai assegnare badge, streak e punti bonus per ogni lezione.
+                Definisci ora i learning outcome così aggiungere incentivi in seguito sarà semplicissimo.
               </p>
               <p className="text-xs">
-                Tip: note down desired achievements in the lesson description so the team can translate them into badge criteria
-                once the studio launches.
+                Suggerimento: annota gli obiettivi desiderati nella descrizione della lezione in modo che il team possa convertirli
+                in criteri per i badge appena lo studio sarà disponibile.
               </p>
             </CardContent>
           </Card>
@@ -171,11 +170,11 @@ export const LessonWorkspaceSheet = ({ courseId, chapter, attachments, onOpenCha
             variant="secondary"
             className={cn('w-fit px-2 py-1 uppercase tracking-wide', chapter.isPublished ? 'bg-emerald-100 text-emerald-700' : '')}
           >
-            {chapter.isPublished ? 'Published lesson' : 'Draft lesson'}
+            {chapter.isPublished ? 'Lezione pubblicata' : 'Lezione in bozza'}
           </Badge>
           <SheetTitle>{chapter.title}</SheetTitle>
           <SheetDescription>
-            Craft the media and resources employees will engage with. Everything saves in real time across the wizard.
+            Prepara media e risorse con cui interagiranno i dipendenti. Ogni modifica viene salvata in tempo reale nel builder.
           </SheetDescription>
         </SheetHeader>
 
@@ -206,7 +205,7 @@ export const LessonWorkspaceSheet = ({ courseId, chapter, attachments, onOpenCha
                     <div className="flex flex-1 flex-col">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-semibold text-foreground">{block.title}</p>
-                        {block.completed ? <Badge variant="outline">Ready</Badge> : null}
+                        {block.completed ? <Badge variant="outline">Pronto</Badge> : null}
                       </div>
                       <p className="text-xs text-muted-foreground">{block.description}</p>
                     </div>

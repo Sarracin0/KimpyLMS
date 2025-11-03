@@ -51,25 +51,28 @@ export default async function ManageQuizPage({ params }: { params: Promise<{ cou
   })
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <div className="flex items-start gap-3">
-        <Link
-          href={`/manage/courses/${courseId}`}
-          className="inline-flex items-center rounded-md p-1 hover:bg-muted/60 transition"
-          aria-label="Torna al builder"
-        >
-          <ArrowLeft className="h-5 w-5 text-[#5D62E1]" />
-        </Link>
-        <div>
-          <h1 className="text-xl font-semibold">Quiz builder</h1>
-          <p className="text-sm text-muted-foreground">Configura le domande, le opzioni e i punteggi per il quiz</p>
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        <div className="mb-8 lg:mb-12">
+          <Link
+            href={`/manage/courses/${courseId}`}
+            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6 group"
+            aria-label="Torna al builder"
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            <span>Torna al builder</span>
+          </Link>
+          <div className="space-y-2">
+            <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight">Quiz builder</h1>
+            <p className="text-base text-muted-foreground">Crea e configura domande, opzioni e punteggi</p>
+          </div>
         </div>
+        <QuizEditor
+          courseId={courseId}
+          blockId={blockId}
+          quiz={quiz}
+        />
       </div>
-      <QuizEditor
-        courseId={courseId}
-        blockId={blockId}
-        quiz={quiz}
-      />
     </div>
   )
 }

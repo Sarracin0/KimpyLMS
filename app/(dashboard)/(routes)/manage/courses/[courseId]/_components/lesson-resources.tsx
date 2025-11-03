@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { Paperclip, Trash2 } from 'lucide-react'
+import { Eye, Paperclip, Trash2 } from 'lucide-react'
 import type { Attachment } from '@prisma/client'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FileUpload } from '@/components/file-upload'
+import { PdfViewerDialog, isPdfAttachment } from '@/components/pdf-viewer'
 import { cn } from '@/lib/utils'
 
 type LessonResourcesProps = {
@@ -27,6 +28,8 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
   const [items, setItems] = useState(initialItems)
   const [linkForm, setLinkForm] = useState<LessonLinkFormState>({ url: '', name: '' })
   const [isLinkSaving, setIsLinkSaving] = useState(false)
+  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
   const refresh = (next: Attachment[]) => {
     setItems(next)
@@ -41,7 +44,7 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
     const response = await axios.post(`/api/courses/${courseId}/chapters/${chapterId}/attachments`, payload)
     const next = [response.data as Attachment, ...items]
     refresh(next)
-    toast.success('Resource added')
+    toast.success('Risorsa aggiunta')
   }
 
   const handleUpload = async (url?: string) => {
@@ -49,13 +52,13 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
       if (!url) return
       await createAttachment({ url })
     } catch {
-      toast.error('Unable to add file')
+      toast.error('Impossibile aggiungere il file')
     }
   }
 
   const handleCreateLink = async () => {
     if (!linkForm.url) {
-      toast.error('Add a valid URL')
+      toast.error('Inserisci un URL valido')
       return
     }
 
@@ -68,7 +71,7 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
       })
       setLinkForm({ url: '', name: '' })
     } catch {
-      toast.error('Unable to save link')
+      toast.error('Impossibile salvare il link')
     } finally {
       setIsLinkSaving(false)
     }
@@ -79,28 +82,35 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
       await axios.delete(`/api/courses/${courseId}/chapters/${chapterId}/attachments/${attachmentId}`)
       const next = items.filter((item) => item.id !== attachmentId)
       refresh(next)
-      toast.success('Resource removed')
+      toast.success('Risorsa rimossa')
     } catch {
-      toast.error('Unable to delete resource')
+      toast.error('Impossibile eliminare la risorsa')
+    }
+  }
+
+  const handlePreviewOpenChange = (nextOpen: boolean) => {
+    setIsPreviewOpen(nextOpen)
+    if (!nextOpen) {
+      setPreviewAttachment(null)
     }
   }
 
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 p-4">
-        <p className="text-sm font-medium text-foreground">Upload supporting files</p>
-        <p className="text-xs text-muted-foreground">Slide decks, PDFs, worksheets or transcripts.</p>
+        <p className="text-sm font-medium text-foreground">Carica file di supporto</p>
+        <p className="text-xs text-muted-foreground">Presentazioni, PDF, dispense o trascrizioni.</p>
         <div className="mt-3">
           <FileUpload endpoint="courseAttachment" onChange={handleUpload} />
         </div>
       </div>
 
       <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
-        <p className="text-sm font-medium text-foreground">Link to hosted content</p>
-        <p className="text-xs text-muted-foreground">Embed knowledge base articles, Google Docs or intranet pages.</p>
+        <p className="text-sm font-medium text-foreground">Collega contenuti esterni</p>
+        <p className="text-xs text-muted-foreground">Incorpora articoli della knowledge base, Google Docs o pagine intranet.</p>
         <div className="mt-3 flex flex-col gap-2 md:flex-row">
           <Input
-            placeholder="Resource name"
+            placeholder="Nome della risorsa"
             value={linkForm.name}
             onChange={(event) => setLinkForm((state) => ({ ...state, name: event.target.value }))}
           />
@@ -111,14 +121,14 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
             className="md:flex-1"
           />
           <Button type="button" onClick={handleCreateLink} disabled={isLinkSaving}>
-            {isLinkSaving ? 'Saving…' : 'Add link'}
+            {isLinkSaving ? 'Salvataggio…' : 'Aggiungi link'}
           </Button>
         </div>
       </div>
 
       <div className="space-y-2">
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No lesson resources yet.</p>
+          <p className="text-sm text-muted-foreground">Nessuna risorsa per questa lezione.</p>
         ) : (
           items.map((item) => (
             <div
@@ -134,13 +144,30 @@ export const LessonResources = ({ courseId, chapterId, initialItems, onChanged }
                   <p className="text-xs text-muted-foreground">{item.type ?? 'file'}</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                {isPdfAttachment(item) && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setPreviewAttachment(item)
+                      setIsPreviewOpen(true)
+                    }}
+                    title="Anteprima"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ))
         )}
       </div>
+
+      <PdfViewerDialog open={isPreviewOpen} onOpenChange={handlePreviewOpenChange} attachment={previewAttachment} contextLabel="Risorsa lezione" />
     </div>
   )
 }

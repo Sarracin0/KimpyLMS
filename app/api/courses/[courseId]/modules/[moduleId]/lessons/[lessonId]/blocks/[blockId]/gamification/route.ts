@@ -123,6 +123,9 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
     let generation: GamificationGenerationResult
 
     try {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Gamification API] starting generation', { blockId, contentType, attachmentCount: attachments.length })
+      }
       generation = await generateGamificationContent({
         companyId: company.id,
         courseId,
@@ -136,6 +139,20 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
         attachments,
         settings,
       })
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Gamification API] generation result meta', {
+          blockId,
+          requestedContentType: contentType,
+          generationType: generation.type,
+          hasQuiz: Boolean(generation.quiz),
+          hasFlashcards: Boolean(generation.flashcards),
+          hasScenario: Boolean(generation.scenario),
+          hasArena: Boolean(generation.arena),
+          attachmentIds,
+          settings,
+        })
+      }
+
     } catch (error) {
       await db.gamificationBlock.update({
         where: { id: gamification.id },
@@ -290,6 +307,79 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
           result: resultJson as Prisma.JsonValue,
         },
       })
+    } else if (contentType === GamificationContentType.SCENARIO && generation.scenario) {
+      const scenarioPayload = generation.scenario
+      if (!scenarioPayload.nodes || scenarioPayload.nodes.length === 0) {
+        await db.gamificationBlock.update({
+          where: { id: gamification.id },
+          data: {
+            status: GamificationStatus.FAILED,
+            result: { error: 'The model did not return decision nodes for the scenario' } satisfies Prisma.JsonValue,
+          },
+        })
+
+        return new NextResponse('Invalid scenario payload', { status: 422 })
+      }
+
+      if (block.quiz) {
+        await db.quiz.delete({ where: { id: block.quiz.id } }).catch(() => undefined)
+      }
+
+      if (gamification.flashcardDeck) {
+        await db.flashcardDeck.delete({ where: { id: gamification.flashcardDeck.id } }).catch(() => undefined)
+      }
+
+      const scenarioResult: Prisma.JsonValue = {
+        scenario: scenarioPayload,
+        raw: generation.raw ?? null,
+      } as Prisma.JsonValue
+
+      await db.gamificationBlock.update({
+        where: { id: gamification.id },
+        data: {
+          status: GamificationStatus.READY,
+          quizId: null,
+          result: scenarioResult,
+        },
+      })
+    } else if (contentType === GamificationContentType.ARENA && generation.arena) {
+      const arenaPayload = generation.arena
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Gamification API] arena payload', { blockId, generationType: generation.type, arenaPayload })
+      }
+      if (!arenaPayload.axes || arenaPayload.axes.length === 0) {
+        await db.gamificationBlock.update({
+          where: { id: gamification.id },
+          data: {
+            status: GamificationStatus.FAILED,
+            result: { error: 'The model did not return evaluation axes for the arena' } satisfies Prisma.JsonValue,
+          },
+        })
+
+        return new NextResponse('Invalid arena payload', { status: 422 })
+      }
+
+      if (block.quiz) {
+        await db.quiz.delete({ where: { id: block.quiz.id } }).catch(() => undefined)
+      }
+
+      if (gamification.flashcardDeck) {
+        await db.flashcardDeck.delete({ where: { id: gamification.flashcardDeck.id } }).catch(() => undefined)
+      }
+
+      const arenaResult: Prisma.JsonValue = {
+        arena: arenaPayload,
+        raw: generation.raw ?? null,
+      } as Prisma.JsonValue
+
+      await db.gamificationBlock.update({
+        where: { id: gamification.id },
+        data: {
+          status: GamificationStatus.READY,
+          quizId: null,
+          result: arenaResult,
+        },
+      })
     } else {
       await db.gamificationBlock.update({
         where: { id: gamification.id },
@@ -300,6 +390,15 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
       })
 
       return new NextResponse('Unexpected generation result', { status: 422 })
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[Gamification API] pre-refresh update summary', {
+        blockId,
+        persistedContentType: contentType,
+        generationType: generation.type,
+        status: 'READY',
+      })
     }
 
     const refreshedBlock = await db.lessonBlock.findUnique({
@@ -322,6 +421,15 @@ export async function POST(request: NextRequest, { params }: { params: RoutePara
         },
       },
     })
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[Gamification API] refreshed block state', {
+        blockId: block.id,
+        persistedType: refreshedBlock?.gamification?.contentType,
+        persistedStatus: refreshedBlock?.gamification?.status,
+        hasArenaResult: Boolean(refreshedBlock?.gamification?.result),
+      })
+    }
+
 
     return NextResponse.json({
       block: refreshedBlock,

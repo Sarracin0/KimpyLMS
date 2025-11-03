@@ -15,8 +15,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 
 const formSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().min(1, 'Description is required'),
+  title: z.string().min(1, 'Il titolo è obbligatorio'),
+  description: z.string().min(1, 'La descrizione è obbligatoria'),
   learningOutcomes: z.string().max(1000).optional().or(z.literal('')),
   prerequisites: z.string().max(1000).optional().or(z.literal('')),
   estimatedDurationMinutes: z
@@ -57,10 +57,10 @@ export const CourseBasicsForm = ({ courseId, initialData }: CourseBasicsFormProp
           prerequisites: values.prerequisites || null,
           estimatedDurationMinutes: values.estimatedDurationMinutes ?? null,
         })
-        toast.success('Course basics saved')
+        toast.success('Informazioni base del corso salvate')
         router.refresh()
       } catch {
-        toast.error('Unable to save basics')
+        toast.error('Impossibile salvare le informazioni base')
       }
     })
   }
@@ -77,11 +77,11 @@ export const CourseBasicsForm = ({ courseId, initialData }: CourseBasicsFormProp
               name="title"
               render={({ field }) => (
                 <FormItem className="md:col-span-2">
-                  <FormLabel>Course title *</FormLabel>
+                  <FormLabel>Titolo del corso *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Manager onboarding" disabled={isSubmitting} {...field} />
+                    <Input placeholder="es. Onboarding Manager" disabled={isSubmitting} {...field} />
                   </FormControl>
-                  <FormDescription>Give participants immediate clarity on the program.</FormDescription>
+                  <FormDescription>Offri ai partecipanti chiarezza immediata sul programma.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -91,11 +91,11 @@ export const CourseBasicsForm = ({ courseId, initialData }: CourseBasicsFormProp
               name="description"
               render={({ field }) => (
                 <FormItem className="md:col-span-2">
-                  <FormLabel>Overview *</FormLabel>
+                  <FormLabel>Panoramica *</FormLabel>
                   <FormControl>
                     <Textarea
                       rows={4}
-                      placeholder="Summarise the learning promise and delivery format."
+                      placeholder="Riassumi la promessa formativa e il formato di erogazione."
                       disabled={isSubmitting}
                       {...field}
                     />
@@ -109,19 +109,19 @@ export const CourseBasicsForm = ({ courseId, initialData }: CourseBasicsFormProp
               name="estimatedDurationMinutes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Estimated effort (minutes)</FormLabel>
+                  <FormLabel>Impegno stimato (minuti)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       min={0}
                       max={2000}
-                      placeholder="e.g. 90"
+                      placeholder="es. 90"
                       disabled={isSubmitting}
                       value={field.value ?? ''}
                       onChange={field.onChange}
                     />
                   </FormControl>
-                  <FormDescription>Helps teams plan the time commitment. Leave blank if not sure.</FormDescription>
+                  <FormDescription>Aiuta i team a pianificare il tempo necessario. Lascia vuoto se non sei sicuro.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -131,11 +131,11 @@ export const CourseBasicsForm = ({ courseId, initialData }: CourseBasicsFormProp
               name="learningOutcomes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Learning outcomes</FormLabel>
+                  <FormLabel>Risultati di apprendimento</FormLabel>
                   <FormControl>
                     <Textarea
                       rows={3}
-                      placeholder="List key skills or behaviours employees will master."
+                      placeholder="Elenca competenze o comportamenti che i dipendenti acquisiranno."
                       disabled={isSubmitting}
                       value={field.value ?? ''}
                       onChange={field.onChange}
@@ -150,11 +150,11 @@ export const CourseBasicsForm = ({ courseId, initialData }: CourseBasicsFormProp
               name="prerequisites"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Prerequisites</FormLabel>
+                  <FormLabel>Prerequisiti</FormLabel>
                   <FormControl>
                     <Textarea
                       rows={3}
-                      placeholder="Optional: mention required context, policies or previous courses."
+                      placeholder="Opzionale: indica contesto, policy o corsi propedeutici richiesti."
                       disabled={isSubmitting}
                       value={field.value ?? ''}
                       onChange={field.onChange}
@@ -167,7 +167,7 @@ export const CourseBasicsForm = ({ courseId, initialData }: CourseBasicsFormProp
           </div>
           <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving…' : 'Save basics'}
+              {isSubmitting ? 'Salvataggio in corso…' : 'Salva informazioni'}
             </Button>
           </div>
         </form>

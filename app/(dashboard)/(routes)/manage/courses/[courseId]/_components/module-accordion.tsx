@@ -27,6 +27,8 @@ import { VideoInput } from './video-input'
 import { UploadDropzone } from '@/lib/uploadthing'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GamificationStudio } from './gamification-studio'
+import { VideoCheckpointsEditor } from './video-checkpoints-editor'
+import type { VideoCheckpoint } from '@/types/video'
 
 export type VirtualClassroomConfig = {
   provider?: string
@@ -72,10 +74,11 @@ export type LessonBlock = {
     questionCount: number
     pointsReward: number
   } | null
-  gamification?: {
-    id: string
-    status: import('@prisma/client').GamificationStatus
-    contentType: import('@prisma/client').GamificationContentType
+  videoCheckpoints?: VideoCheckpoint[] | null
+    gamification?: {
+      id: string
+      status: import('@prisma/client').GamificationStatus
+      contentType: 'QUIZ' | 'FLASHCARDS' | 'SCENARIO' | 'ARENA'
     quizId: string | null
     sourceAttachmentIds: string[]
     config: Record<string, unknown> | null
@@ -92,6 +95,19 @@ export type LessonBlock = {
       questionCount: number
       pointsReward: number
     } | null
+    scenarioSummary: {
+      intro: string
+      objectives: string[]
+      nodeCount: number
+      estimatedDurationMinutes: number | null
+    } | null
+    arenaSummary: {
+      title: string
+      learnerRole: string
+      axes: number
+      objectives: number
+      estimatedDurationMinutes: number | null
+    } | null
   } | null
 }
 
@@ -103,6 +119,9 @@ const gamificationStatusStyles: Record<string, string> = {
   READY: 'bg-emerald-100 text-emerald-700',
   FAILED: 'bg-rose-100 text-rose-700',
 }
+
+const formatCountLabel = (count: number, singular: string, plural: string) =>
+  `${count} ${count === 1 ? singular : plural}`
 
 interface ModuleAccordionProps {
   module: Module
@@ -281,7 +300,7 @@ export const ModuleAccordion = ({
       if (!file) return
       const url = (file.ufsUrl ?? file.url ?? file.appUrl)?.toString()
       if (!url) {
-        toast.error('Upload failed, missing file URL')
+        toast.error('Caricamento non riuscito: URL del file mancante')
         return
       }
 
@@ -362,18 +381,18 @@ export const ModuleAccordion = ({
           </div>
 
           <Badge variant={module.isPublished ? 'default' : 'secondary'} className="text-xs">
-            {module.isPublished ? 'Published' : 'Draft'}
+            {module.isPublished ? 'Pubblicato' : 'Bozza'}
           </Badge>
           <Badge variant="outline" className="text-xs">
-            {module.lessons.length} lesson{module.lessons.length !== 1 ? 's' : ''}
+            {formatCountLabel(module.lessons.length, 'lezione', 'lezioni')}
           </Badge>
           <Button
             size="sm"
             variant="ghost"
             onClick={handleModulePublishToggle}
             className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
-            title={module.isPublished ? 'Unpublish module' : 'Publish module'}
-            aria-label={module.isPublished ? 'Unpublish module' : 'Publish module'}
+            title={module.isPublished ? 'Rimuovi pubblicazione modulo' : 'Pubblica modulo'}
+            aria-label={module.isPublished ? 'Rimuovi pubblicazione modulo' : 'Pubblica modulo'}
           >
             {module.isPublished ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </Button>
@@ -404,7 +423,7 @@ export const ModuleAccordion = ({
                 onChange={(e) => handleModuleUpdate('description', e.target.value)}
                 onBlur={handleModuleSave}
                 onKeyDown={(e) => handleKeyDown(e, handleModuleSave)}
-                placeholder="Module description..."
+                placeholder="Descrizione del modulo..."
                 className="min-h-[60px] text-sm"
                 autoFocus
               />
@@ -413,7 +432,7 @@ export const ModuleAccordion = ({
                 className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleModuleEdit('description')}
               >
-                {module.description || 'Click to add description...'}
+                {module.description || 'Clicca per aggiungere una descrizione...'}
               </p>
             )}
           </div>
@@ -573,18 +592,18 @@ const LessonItem = (props: LessonItemProps) => {
           </div>
 
           <Badge variant={lesson.isPublished ? 'default' : 'secondary'} className="text-xs">
-            {lesson.isPublished ? 'Published' : 'Draft'}
+            {lesson.isPublished ? 'Pubblicata' : 'Bozza'}
           </Badge>
           <Badge variant="outline" className="text-xs">
-            {lesson.blocks.length} block{lesson.blocks.length !== 1 ? 's' : ''}
+            {formatCountLabel(lesson.blocks.length, 'blocco', 'blocchi')}
           </Badge>
           <Button
             size="sm"
             variant="ghost"
             onClick={handleLessonPublishToggle}
             className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
-            title={lesson.isPublished ? 'Unpublish lesson' : 'Publish lesson'}
-            aria-label={lesson.isPublished ? 'Unpublish lesson' : 'Publish lesson'}
+            title={lesson.isPublished ? 'Rimuovi pubblicazione lezione' : 'Pubblica lezione'}
+            aria-label={lesson.isPublished ? 'Rimuovi pubblicazione lezione' : 'Pubblica lezione'}
           >
             {lesson.isPublished ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
           </Button>
@@ -606,15 +625,15 @@ const LessonItem = (props: LessonItemProps) => {
             <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuItem onClick={() => onAddBlock(moduleId, lesson.id, 'VIDEO_LESSON')}>
                 <Video className="mr-2 h-3.5 w-3.5 text-[#5D62E1]" />
-                <span>Video lesson</span>
+                <span>Lezione video</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onAddBlock(moduleId, lesson.id, 'RESOURCES')}>
                 <FileText className="mr-2 h-3.5 w-3.5 text-[#5D62E1]" />
-                <span>Resources</span>
+                <span>Risorse</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onAddBlock(moduleId, lesson.id, 'LIVE_SESSION')}>
                 <Cast className="mr-2 h-3.5 w-3.5 text-[#5D62E1]" />
-                <span>Virtual classroom</span>
+                <span>Aula virtuale</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onAddBlock(moduleId, lesson.id, 'QUIZ')}>
                 <ListChecks className="mr-2 h-3.5 w-3.5 text-[#5D62E1]" />
@@ -622,7 +641,7 @@ const LessonItem = (props: LessonItemProps) => {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onAddBlock(moduleId, lesson.id, 'GAMIFICATION')}>
                 <Sparkles className="mr-2 h-3.5 w-3.5 text-[#5D62E1]" />
-                <span>Gamification</span>
+                <span>Gamificazione</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -657,7 +676,7 @@ const LessonItem = (props: LessonItemProps) => {
                 onChange={(e) => onLessonUpdate(lesson.id, 'description', e.target.value)}
                 onBlur={onLessonSave}
                 onKeyDown={(e) => handleKeyDown(e, onLessonSave)}
-                placeholder="Lesson description..."
+                placeholder="Descrizione della lezione..."
                 className="min-h-[40px] text-xs"
                 autoFocus
               />
@@ -666,7 +685,7 @@ const LessonItem = (props: LessonItemProps) => {
                 className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => onLessonEdit(lesson.id, 'description')}
               >
-                {lesson.description || 'Click to add description...'}
+                {lesson.description || 'Clicca per aggiungere una descrizione...'}
               </p>
             )}
           </div>
@@ -688,12 +707,12 @@ const LessonItem = (props: LessonItemProps) => {
                 block.type === 'VIDEO_LESSON'
                   ? 'Video'
                   : block.type === 'RESOURCES'
-                    ? 'Resources'
+                    ? 'Risorse'
                     : block.type === 'QUIZ'
                       ? 'Quiz'
-                      : block.type === 'GAMIFICATION'
-                        ? 'Gamification'
-                        : 'Virtual classroom'
+                    : block.type === 'GAMIFICATION'
+                        ? 'Gamificazione'
+                        : 'Aula virtuale'
               const attachments = block.attachments ?? []
               const resourceMode = resourceModeByBlock[block.id] ?? (attachments.length > 0 ? 'upload' : block.contentUrl ? 'link' : 'upload')
               return (
@@ -725,7 +744,7 @@ const LessonItem = (props: LessonItemProps) => {
                     )}
 
                     <Badge variant={block.isPublished ? 'default' : 'secondary'} className="text-xs">
-                      {block.isPublished ? 'Published' : 'Draft'}
+                      {block.isPublished ? 'Pubblicato' : 'Bozza'}
                     </Badge>
                     {block.type === 'GAMIFICATION' && block.gamification ? (
                       <Badge
@@ -740,8 +759,8 @@ const LessonItem = (props: LessonItemProps) => {
                       variant="ghost"
                       onClick={() => handleBlockPublishToggle(block.id, block.isPublished)}
                       className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
-                      title={block.isPublished ? 'Unpublish block' : 'Publish block'}
-                      aria-label={block.isPublished ? 'Unpublish block' : 'Publish block'}
+                      title={block.isPublished ? 'Rimuovi pubblicazione blocco' : 'Pubblica blocco'}
+                      aria-label={block.isPublished ? 'Rimuovi pubblicazione blocco' : 'Pubblica blocco'}
                     >
                       {block.isPublished ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                     </Button>
@@ -781,7 +800,7 @@ const LessonItem = (props: LessonItemProps) => {
                         onChange={(e) => onBlockUpdate(lesson.id, block.id, 'content', e.target.value)}
                         onBlur={onBlockSave}
                         onKeyDown={(e) => handleKeyDown(e, onBlockSave)}
-                        placeholder="Video description or notes..."
+                        placeholder="Descrizione o note sul video..."
                         className="min-h-[60px] text-xs"
                         autoFocus
                       />
@@ -790,9 +809,18 @@ const LessonItem = (props: LessonItemProps) => {
                         className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                         onClick={() => onBlockEdit(lesson.id, block.id, 'content')}
                       >
-                        {block.content || 'Click to add description...'}
+                        {block.content || 'Clicca per aggiungere una descrizione...'}
                       </p>
                     )}
+                    {courseId ? (
+                      <VideoCheckpointsEditor
+                        courseId={courseId}
+                        moduleId={moduleId}
+                        lesson={lesson}
+                        block={block}
+                        onReplaceBlock={onReplaceBlock}
+                      />
+                    ) : null}
                   </div>
                 ) : block.type === 'RESOURCES' ? (
                   <div className="space-y-3">
@@ -803,7 +831,7 @@ const LessonItem = (props: LessonItemProps) => {
                           onChange={(e) => onBlockUpdate(lesson.id, block.id, 'content', e.target.value)}
                           onBlur={onBlockSave}
                           onKeyDown={(e) => handleKeyDown(e, onBlockSave)}
-                          placeholder="Resource description..."
+                          placeholder="Descrizione delle risorse..."
                           className="min-h-[60px] text-xs"
                           autoFocus
                         />
@@ -812,7 +840,7 @@ const LessonItem = (props: LessonItemProps) => {
                           className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                           onClick={() => onBlockEdit(lesson.id, block.id, 'content')}
                         >
-                          {block.content || 'Click to add description...'}
+                          {block.content || 'Clicca per aggiungere una descrizione...'}
                         </p>
                       )}
                     </div>
@@ -850,13 +878,13 @@ const LessonItem = (props: LessonItemProps) => {
                             />
                           </div>
                           {pendingAttachmentBlockId === block.id ? (
-                            <p className="mt-2 text-xs text-muted-foreground">Saving attachment…</p>
+                            <p className="mt-2 text-xs text-muted-foreground">Salvataggio allegato…</p>
                           ) : null}
                         </div>
 
                         <div className="space-y-1">
                           {attachments.length === 0 ? (
-                            <p className="text-xs text-muted-foreground">No files uploaded for this block yet.</p>
+                            <p className="text-xs text-muted-foreground">Nessun file caricato per questo blocco.</p>
                           ) : (
                             attachments.map((attachment) => (
                               <div
@@ -910,7 +938,7 @@ const LessonItem = (props: LessonItemProps) => {
                             className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                             onClick={() => onBlockEdit(lesson.id, block.id, 'contentUrl')}
                           >
-                            {block.contentUrl || 'Click to add resource URL...'}
+                            {block.contentUrl || 'Clicca per aggiungere l\'URL della risorsa...'}
                           </p>
                         )}
                         <p className="text-[11px] text-muted-foreground">
@@ -943,7 +971,7 @@ const LessonItem = (props: LessonItemProps) => {
                         className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                         onClick={() => onBlockEdit(lesson.id, block.id, 'content')}
                       >
-                        {block.content || 'Click to add notes/instructions...'}
+                        {block.content || 'Clicca per aggiungere note/istruzioni...'}
                       </p>
                     )}
                     <a
@@ -964,9 +992,8 @@ const LessonItem = (props: LessonItemProps) => {
                 ) : (
                   <div className="space-y-2">
                     <div className="rounded-md border border-border/40 bg-background/70 p-3 text-xs space-y-1">
-                      <p className="text-xs font-semibold"></p>
                       <p className="text-xs text-muted-foreground">
-                        Meeting ID: {block.liveSessionConfig?.meetingId ?? 'Da generare'}
+                        ID riunione: {block.liveSessionConfig?.meetingId ?? 'Da generare'}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Stato: {block.liveSessionConfig?.status ?? 'offline'}
@@ -985,7 +1012,7 @@ const LessonItem = (props: LessonItemProps) => {
                         onChange={(e) => onBlockUpdate(lesson.id, block.id, 'contentUrl', e.target.value)}
                         onBlur={onBlockSave}
                         onKeyDown={(e) => handleKeyDown(e, onBlockSave)}
-                        placeholder="Virtual classroom join URL"
+                        placeholder="URL di accesso alla classe virtuale"
                         className="text-xs"
                         autoFocus
                       />
@@ -1013,7 +1040,7 @@ const LessonItem = (props: LessonItemProps) => {
                         className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                         onClick={() => onBlockEdit(lesson.id, block.id, 'content')}
                       >
-                        {block.content || 'Click to add virtual classroom notes...'}
+                        {block.content || 'Clicca per aggiungere note sull\'aula virtuale...'}
                       </p>
                     )}
                   </div>

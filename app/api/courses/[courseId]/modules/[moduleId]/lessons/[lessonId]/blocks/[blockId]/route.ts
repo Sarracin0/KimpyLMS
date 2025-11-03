@@ -66,6 +66,12 @@ export async function PATCH(request: NextRequest, { params }: { params: RoutePar
       data.contentUrl = null
     }
 
+    if (Array.isArray(body.videoCheckpoints)) {
+      data.videoCheckpoints = body.videoCheckpoints as Prisma.JsonValue
+    } else if (body.videoCheckpoints === null) {
+      data.videoCheckpoints = null
+    }
+
     if (typeof body.isPublished === 'boolean') {
       data.isPublished = body.isPublished
     }

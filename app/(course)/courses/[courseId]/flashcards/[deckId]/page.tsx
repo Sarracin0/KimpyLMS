@@ -34,7 +34,13 @@ export default async function CourseFlashcardPage({ params }: { params: PagePara
           lessonBlock: {
             select: {
               title: true,
-              lesson: { select: { title: true } },
+              lessonId: true,
+              lesson: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
             },
           },
         },
@@ -87,7 +93,7 @@ export default async function CourseFlashcardPage({ params }: { params: PagePara
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <FlashcardViewer deck={viewerDeck} />
+      <FlashcardViewer deck={viewerDeck} deckId={deck.id} />
     </div>
   )
 }

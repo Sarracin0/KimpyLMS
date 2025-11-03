@@ -6,7 +6,11 @@ import {
   GeneratedQuizPayload,
   GeneratedFlashcardPayload,
   GeneratedQuizQuestion,
+  GeneratedScenarioPayload,
+  GeneratedArenaPayload,
 } from './types'
+import { normalizeScenarioPayload } from './scenario'
+import { normalizeArenaPayload } from './arena'
 import { logWarn } from '@/lib/logger'
 
 type ToolCall = {
@@ -110,6 +114,208 @@ const FLASHCARD_TOOL = {
   },
 }
 
+const SCENARIO_TOOL = {
+  type: 'function' as const,
+  name: 'create_scenario_lab',
+  description: 'Produce an immersive branching scenario lab grounded in the provided materials.',
+  strict: true,
+  parameters: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      intro: { type: 'string' },
+      objectives: {
+        type: 'array',
+        minItems: 1,
+        items: { type: 'string' },
+      },
+      estimatedDurationMinutes: { type: ['number', 'null'] },
+      contextNotes: { type: ['string', 'null'] },
+      nodes: {
+        type: 'array',
+        minItems: 2,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            id: { type: 'string' },
+            type: { type: 'string', enum: ['decision', 'reflection'] },
+            situation: { type: 'string' },
+            headline: { type: ['string', 'null'] },
+            narrative: { type: ['string', 'null'] },
+            prompt: { type: ['string', 'null'] },
+            guidance: { type: ['string', 'null'] },
+            maxScore: { type: ['number', 'null'] },
+            choices: {
+              type: ['array', 'null'],
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  id: { type: 'string' },
+                  label: { type: 'string' },
+                  feedback: { type: 'string' },
+                  nextNodeId: { type: ['string', 'null'] },
+                  impact: {
+                    type: 'object',
+                    additionalProperties: false,
+                    properties: {
+                      score: { type: ['number', 'null'] },
+                      risk: { type: ['number', 'null'] },
+                      competencyTags: {
+                        type: 'array',
+                        minItems: 0,
+                        items: { type: 'string' },
+                      },
+                      summary: { type: ['string', 'null'] },
+                    },
+                    required: ['score', 'risk', 'competencyTags', 'summary'],
+                  },
+                },
+                required: ['id', 'label', 'feedback', 'nextNodeId', 'impact'],
+              },
+              minItems: 0,
+            },
+            rubric: {
+              type: ['object', 'null'] ,
+              additionalProperties: false,
+              properties: {
+                excellent: { type: ['string', 'null'] },
+                satisfactory: { type: ['string', 'null'] },
+                needsSupport: { type: ['string', 'null'] },
+              },
+              required: ['excellent', 'satisfactory', 'needsSupport'],
+            },
+          },
+          required: ['id', 'type', 'situation', 'headline', 'narrative', 'prompt', 'guidance', 'maxScore', 'choices', 'rubric'],
+        },
+      },
+      debrief: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          summary: { type: 'string' },
+          coachingPoints: {
+            type: 'array',
+            minItems: 0,
+            items: { type: 'string' },
+          },
+          skillSignals: {
+            type: 'array',
+            minItems: 0,
+            items: { type: 'string' },
+          },
+          riskAlerts: {
+            type: 'array',
+            minItems: 0,
+            items: { type: 'string' },
+          },
+          followUpQuestions: {
+            type: 'array',
+            minItems: 0,
+            items: { type: 'string' },
+          },
+        },
+        required: ['summary', 'coachingPoints', 'skillSignals', 'riskAlerts', 'followUpQuestions'],
+      },
+    },
+    required: ['intro', 'objectives', 'estimatedDurationMinutes', 'contextNotes', 'nodes', 'debrief'],
+  },
+}
+
+const ARENA_TOOL = {
+  type: 'function' as const,
+  name: 'create_practice_arena',
+  description: 'Produce a reflective Practice Arena exercise focused on action-plan iteration and soft skills.',
+  strict: true,
+  parameters: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      title: { type: 'string' },
+      scenarioBrief: { type: 'string' },
+      learnerRole: { type: 'string' },
+      objectives: {
+        type: 'array',
+        minItems: 1,
+        items: { type: 'string' },
+      },
+      challenge: { type: 'string' },
+      submissionPrompt: { type: 'string' },
+      iterationPrompt: { type: 'string' },
+      peerReviewPrompt: { type: 'string' },
+      expectedSections: {
+        type: 'array',
+        minItems: 1,
+        items: { type: 'string' },
+      },
+      axes: {
+        type: 'array',
+        minItems: 1,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            id: { type: 'string' },
+            label: { type: 'string' },
+            description: { type: ['string', 'null'] },
+            weight: { type: ['number', 'null'] },
+            coachingTips: {
+              type: 'array',
+              minItems: 0,
+              items: { type: 'string' },
+            },
+            levels: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                excels: { type: ['string', 'null'] },
+                solid: { type: ['string', 'null'] },
+                needsSupport: { type: ['string', 'null'] },
+              },
+              required: ['excels', 'solid', 'needsSupport'],
+            },
+          },
+          required: ['id', 'label', 'description', 'weight', 'coachingTips', 'levels'],
+        },
+      },
+      aiCoachTips: {
+        type: 'array',
+        minItems: 1,
+        items: { type: 'string' },
+      },
+      estimatedDurationMinutes: { type: ['number', 'null'] },
+      sampleHighScorePlan: { type: ['string', 'null'] },
+      tokens: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          baseAward: { type: 'number' },
+          improvementBonus: { type: 'number' },
+          endorsementBonus: { type: 'number' },
+        },
+        required: ['baseAward', 'improvementBonus', 'endorsementBonus'],
+      },
+    },
+    required: [
+      'title',
+      'scenarioBrief',
+      'learnerRole',
+      'objectives',
+      'challenge',
+      'submissionPrompt',
+      'iterationPrompt',
+      'peerReviewPrompt',
+      'expectedSections',
+      'axes',
+      'aiCoachTips',
+      'estimatedDurationMinutes',
+      'sampleHighScorePlan',
+      'tokens',
+    ],
+  },
+}
+
 const QUIZ_DEFAULT_PASS_SCORE = 70
 const QUIZ_DEFAULT_POINTS = 100
 
@@ -124,7 +330,7 @@ async function fetchSnippet(url: string): Promise<string> {
     }
     const text = await response.text()
     return text.slice(0, MAX_SOURCE_SNIPPET)
-  } catch (error) {
+  } catch (_error) {
     logWarn('GAMIFICATION_SNIPPET', `Unable to fetch document ${url}`)
     return ''
   }
@@ -158,17 +364,62 @@ function buildDocumentsContext(
 function buildSettingsContext(input: GamificationGenerationInput) {
   const { contentType, settings } = input
   const lines: string[] = []
-
-  if (contentType === GamificationContentType.QUIZ) {
-    lines.push(`Numero richiesto di domande: ${settings.questionCount ?? 6}`)
-    lines.push(`Difficoltà target: ${(settings.difficulty ?? 'mixed').toString()}`)
-  } else {
-    lines.push(`Numero richiesto di flashcard: ${settings.cardCount ?? 10}`)
+  const rawSettings = settings as Record<string, unknown>
+  const getString = (value: unknown, fallback: string) =>
+    typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback
+  const getNumber = (value: unknown, fallback: number) => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : fallback
   }
 
-  lines.push(`Tono da utilizzare: ${(settings.tone ?? 'neutral').toString()}`)
-  if (settings.notes) {
-    lines.push(`Istruzioni extra dall'HR: ${settings.notes}`)
+  if (contentType === GamificationContentType.QUIZ) {
+    lines.push(`Numero richiesto di domande: ${getNumber(rawSettings.questionCount, 6)}`)
+    lines.push(`Difficoltà target: ${getString(rawSettings.difficulty, 'mixed')}`)
+  } else if (contentType === GamificationContentType.FLASHCARDS) {
+    lines.push(`Numero richiesto di flashcard: ${getNumber(rawSettings.cardCount, 10)}`)
+  } else if (contentType === GamificationContentType.SCENARIO) {
+    lines.push(`Numero di nodi decisionali richiesto: ${getNumber(rawSettings.nodeCount, 5)}`)
+    const focus = getString(rawSettings.focusCompetency, '')
+    if (focus) {
+      lines.push(`Competenza primaria da allenare: ${focus}`)
+    }
+    const risk = getString(rawSettings.riskProfile, '')
+    if (risk) {
+      lines.push(`Profilo di rischio desiderato: ${risk}`)
+    }
+  } else {
+    const contextLabel = getString(rawSettings.contextLabel, '')
+    if (contextLabel) {
+      lines.push(`Contesto dichiarato: ${contextLabel}`)
+    }
+    const audience = getString(rawSettings.audience, '')
+    if (audience) {
+      lines.push(`Pubblico target: ${audience}`)
+    }
+    const mustInclude = getString(rawSettings.mustInclude, '')
+    if (mustInclude) {
+      lines.push(`Elementi obbligatori da citare nello scenario: ${mustInclude}`)
+    }
+    lines.push(`Numero di assi di valutazione desiderato: ${getNumber(rawSettings.axisCount, 3)}`)
+    const softSkill = getString(rawSettings.focusCompetency, '')
+    if (softSkill) {
+      lines.push(`Competenza/abilità da mettere in evidenza: ${softSkill}`)
+    }
+    const iterationFocus = getString(rawSettings.iterationGoal, '')
+    if (iterationFocus) {
+      lines.push(`Focus di miglioramento tra i tentativi: ${iterationFocus}`)
+    }
+    const peerReview = getString(rawSettings.peerVisibility, '')
+    if (peerReview) {
+      lines.push(`Modalità endorsement tra colleghi: ${peerReview}`)
+    }
+  }
+
+  lines.push(`Tono da utilizzare: ${getString(rawSettings.tone, 'neutral')}`)
+  const notes = getString(rawSettings.notes, '')
+  if (notes) {
+    lines.push(`Istruzioni extra dall'HR: ${notes}`)
   }
 
   return lines.join('\n')
@@ -219,6 +470,7 @@ function normalizeFlashcardPayload(payload: GeneratedFlashcardPayload): Generate
   }
 }
 
+
 export async function generateGamificationContent(
   input: GamificationGenerationInput,
 ): Promise<GamificationGenerationResult> {
@@ -244,9 +496,22 @@ export async function generateGamificationContent(
   const toolChoice =
     input.contentType === GamificationContentType.QUIZ
       ? { type: 'function', name: 'create_quiz' as const }
-      : { type: 'function', name: 'create_flashcard_deck' as const }
+      : input.contentType === GamificationContentType.FLASHCARDS
+        ? { type: 'function', name: 'create_flashcard_deck' as const }
+        : input.contentType === GamificationContentType.SCENARIO
+          ? { type: 'function', name: 'create_scenario_lab' as const }
+          : { type: 'function', name: 'create_practice_arena' as const }
 
-  const tools = [QUIZ_TOOL, FLASHCARD_TOOL]
+  const tools = [QUIZ_TOOL, FLASHCARD_TOOL, SCENARIO_TOOL, ARENA_TOOL]
+
+  const instructionText =
+    input.contentType === GamificationContentType.QUIZ
+      ? 'Genera un quiz strutturato seguendo lo schema JSON della funzione create_quiz. Ogni domanda deve essere agganciata ai contenuti forniti.'
+      : input.contentType === GamificationContentType.FLASHCARDS
+        ? 'Genera un mazzo di flashcard seguendo lo schema JSON della funzione create_flashcard_deck. Ogni carta deve essere fondata sui materiali.'
+        : input.contentType === GamificationContentType.SCENARIO
+          ? 'Genera un laboratorio decisionale ramificato seguendo lo schema JSON della funzione create_scenario_lab. Mantieni 4-6 nodi con feedback specifico, punteggio e analisi del rischio per HR.'
+          : 'Genera una Practice Arena seguendo lo schema JSON della funzione create_practice_arena. Fornisci un briefing realistico, rubriche di valutazione coerenti e prompt per iterazione e peer endorsement, rispettando contesto, pubblico e vincoli indicati.'
 
   const response = await client.responses.create({
     model,
@@ -264,13 +529,7 @@ export async function generateGamificationContent(
         role: 'user',
         content: [
           { type: 'input_text', text: baseUserPrompt },
-          {
-            type: 'input_text',
-            text:
-              input.contentType === GamificationContentType.QUIZ
-                ? 'Genera un quiz strutturato seguendo lo schema JSON della funzione create_quiz. Ogni domanda deve essere agganciata ai contenuti forniti.'
-                : 'Genera un mazzo di flashcard seguendo lo schema JSON della funzione create_flashcard_deck. Ogni carta deve essere fondata sui materiali.',
-          },
+          { type: 'input_text', text: instructionText },
         ],
       },
     ],
@@ -321,6 +580,32 @@ export async function generateGamificationContent(
     return {
       type: GamificationContentType.FLASHCARDS,
       flashcards: normalized,
+      raw: response,
+    }
+  }
+
+  if (toolCall.name === 'create_scenario_lab') {
+    const normalized = normalizeScenarioPayload(parsed as GeneratedScenarioPayload)
+    if (!normalized.nodes || normalized.nodes.length === 0) {
+      throw new Error('Scenario payload does not contain decision nodes')
+    }
+
+    return {
+      type: GamificationContentType.SCENARIO,
+      scenario: normalized,
+      raw: response,
+    }
+  }
+
+  if (toolCall.name === 'create_practice_arena') {
+    const normalized = normalizeArenaPayload(parsed as GeneratedArenaPayload)
+    if (!normalized.axes || normalized.axes.length === 0) {
+      throw new Error('Arena payload does not contain axes for evaluation')
+    }
+
+    return {
+      type: GamificationContentType.ARENA,
+      arena: normalized,
       raw: response,
     }
   }

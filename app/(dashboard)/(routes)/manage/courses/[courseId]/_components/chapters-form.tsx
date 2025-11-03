@@ -48,12 +48,12 @@ export const ChaptersForm = ({ initialData, courseId }: ChaptersFormProps) => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       await axios.post(`/api/courses/${courseId}/chapters`, values)
-      toast.success('Chapter created')
+      toast.success('Capitolo creato')
       form.reset()
       toggleCreating()
       router.refresh()
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Si è verificato un errore')
     }
   }
 
@@ -64,10 +64,10 @@ export const ChaptersForm = ({ initialData, courseId }: ChaptersFormProps) => {
       await axios.put(`/api/courses/${courseId}/chapters/reorder`, {
         list: updateData,
       })
-      toast.success('Chapters reordered')
+      toast.success('Capitoli riordinati')
       router.refresh()
     } catch {
-      toast.error('Something went wrong')
+      toast.error('Si è verificato un errore')
     } finally {
       setIsUpdating(false)
     }
@@ -93,14 +93,14 @@ export const ChaptersForm = ({ initialData, courseId }: ChaptersFormProps) => {
         </div>
       )}
       <div className="flex items-center justify-between font-medium">
-        Lessons
+        Lezioni
         <Button onClick={toggleCreating} variant="ghost">
           {isCreating ? (
-            <>Cancel</>
+            <>Annulla</>
           ) : (
             <>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add a lesson
+              Aggiungi una lezione
             </>
           )}
         </Button>
@@ -114,25 +114,25 @@ export const ChaptersForm = ({ initialData, courseId }: ChaptersFormProps) => {
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input disabled={isSubmitting} placeholder="e.g. 'Kick-off session'" {...field} />
+                    <Input disabled={isSubmitting} placeholder="es. 'Sessione di kick-off'" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <Button disabled={!isValid || isSubmitting} type="submit">
-              Create lesson
+              Crea lezione
             </Button>
           </form>
         </Form>
       )}
       {!isCreating && (
         <div className={cn('mt-4 text-sm text-muted-foreground', !initialData.chapters.length && 'italic')}>
-          {!initialData.chapters.length && 'No lessons yet'}
+          {!initialData.chapters.length && 'Ancora nessuna lezione'}
           <ChaptersList onEdit={onEdit} onReorder={onReorder} items={initialData.chapters || []} />
         </div>
       )}
-      {!isCreating && <p className="mt-4 text-xs text-muted-foreground">Drag and drop to reorder the sequence</p>}
+      {!isCreating && <p className="mt-4 text-xs text-muted-foreground">Trascina e rilascia per cambiare l&apos;ordine</p>}
       {selectedChapter ? (
         <LessonWorkspaceSheet
           courseId={courseId}
