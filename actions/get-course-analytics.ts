@@ -82,9 +82,11 @@ export async function getCourseAnalytics(courseId: string, companyId: string): P
 
   const [
     totalChapters,
+    totalLessons,
     enrollments,
     completedEnrollments,
     inProgressEnrollments,
+    chapterProgress,
     lessonProgress,
     coachMessages,
     comments,
@@ -94,6 +96,7 @@ export async function getCourseAnalytics(courseId: string, companyId: string): P
     timelineCoach,
   ] = await Promise.all([
     db.chapter.count({ where: { courseId } }),
+    db.lesson.count({ where: { module: { courseId } } }),
     db.courseEnrollment.findMany({
       where: { courseId },
       select: {
@@ -115,6 +118,15 @@ export async function getCourseAnalytics(courseId: string, companyId: string): P
     db.userProgress.findMany({
       where: {
         chapter: { courseId },
+        isCompleted: true,
+      },
+      select: {
+        userProfileId: true,
+      },
+    }),
+    db.userLessonProgress.findMany({
+      where: {
+        lesson: { module: { courseId } },
         isCompleted: true,
       },
       select: {
@@ -199,8 +211,11 @@ export async function getCourseAnalytics(courseId: string, companyId: string): P
   const displayNameMap =
     userIds.size > 0 ? await buildUserDisplayNameMap(userIds) : new Map<string, string>()
 
+  const totalUnits = totalChapters > 0 ? totalChapters : totalLessons
+
   const completedByUser = new Map<string, number>()
-  lessonProgress.forEach((record) => {
+  const progressSource = totalChapters > 0 ? chapterProgress : lessonProgress
+  progressSource.forEach((record) => {
     completedByUser.set(record.userProfileId, (completedByUser.get(record.userProfileId) ?? 0) + 1)
   })
 
@@ -219,7 +234,7 @@ export async function getCourseAnalytics(courseId: string, companyId: string): P
   const learners: CourseLearnerRow[] = enrollments.map((enrollment) => {
     const profile = enrollment.userProfile
     const completedChapters = completedByUser.get(enrollment.userProfileId) ?? 0
-    const completionRate = formatCompletionRate(completedChapters, totalChapters)
+    const completionRate = formatCompletionRate(completedChapters, totalUnits)
     const userId = profile?.userId ?? 'Utente'
     const displayName =
       (profile?.userId ? displayNameMap.get(profile.userId) : undefined) ??

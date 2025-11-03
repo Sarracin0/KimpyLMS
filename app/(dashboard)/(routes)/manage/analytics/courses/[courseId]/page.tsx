@@ -94,18 +94,20 @@ export default async function CourseAnalyticsPage({ params }: { params: Promise<
         </div>
         <div className="rounded-3xl border border-white/30 bg-white/80 p-6 shadow-sm backdrop-blur">
           <h2 className="text-base font-semibold text-foreground">Practice Arena</h2>
-          <p className="text-xs text-muted-foreground">Insight Tokens e endorsement generati in questo corso.</p>
+          <p className="text-xs text-muted-foreground">
+            Dati della simulazione iterativa: Insight Tokens, piani inviati, punteggi medi ed endorsement HR.
+          </p>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex items-center justify-between">
-              <dt className="text-muted-foreground">Tokens</dt>
+              <dt className="text-muted-foreground">Insight Tokens assegnati</dt>
               <dd className="font-semibold text-foreground">{formatNumber(analytics.practiceArena.tokens)}</dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-muted-foreground">Tentativi</dt>
+              <dt className="text-muted-foreground">Piani inviati</dt>
               <dd className="font-semibold text-foreground">{formatNumber(analytics.practiceArena.attempts)}</dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-muted-foreground">Score medio</dt>
+              <dt className="text-muted-foreground">Punteggio medio (0-100)</dt>
               <dd className="font-semibold text-foreground">
                 {analytics.practiceArena.averageScore == null
                   ? '—'
@@ -113,7 +115,7 @@ export default async function CourseAnalyticsPage({ params }: { params: Promise<
               </dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-muted-foreground">Endorsement HR</dt>
+              <dt className="text-muted-foreground">Endorsement concessi (HR)</dt>
               <dd className="font-semibold text-foreground">{formatNumber(analytics.practiceArena.endorsements)}</dd>
             </div>
           </dl>
@@ -131,7 +133,7 @@ export default async function CourseAnalyticsPage({ params }: { params: Promise<
                 <th className="px-4 py-3 text-left font-medium">Titolo</th>
                 <th className="px-4 py-3 text-left font-medium">Stato</th>
                 <th className="px-4 py-3 text-left font-medium">Completamento</th>
-                <th className="px-4 py-3 text-left font-medium">Coach AI</th>
+                <th className="px-4 py-3 text-left font-medium">Coach AI (messaggi)</th>
                 <th className="px-4 py-3 text-left font-medium">Note</th>
               </tr>
             </thead>
@@ -171,15 +173,15 @@ export default async function CourseAnalyticsPage({ params }: { params: Promise<
                 <p className="text-sm font-semibold text-foreground">{signal.lessonTitle}</p>
                 <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
                   <div className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700">
-                    Coach AI
+                    Coach AI (messaggi)
                     <div className="text-xs font-semibold text-foreground">{formatNumber(signal.coachMessages)}</div>
                   </div>
                   <div className="rounded-full bg-amber-50 px-2 py-1 text-amber-700">
-                    Note
+                    Note inserite
                     <div className="text-xs font-semibold text-foreground">{formatNumber(signal.notes)}</div>
                   </div>
                   <div className="rounded-full bg-sky-50 px-2 py-1 text-sky-700">
-                    Rewind
+                    Rewatch video
                     <div className="text-xs font-semibold text-foreground">{formatNumber(signal.rewind)}</div>
                   </div>
                 </div>
